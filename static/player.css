@@ -22,13 +22,17 @@
   user-select: none; /* Évite la sélection de texte */
 }
 
-body {
+html, body {
   background-color: black;
   overflow: hidden;
   width: 100vw;
   height: 100vh;
   box-sizing: border-box;
   font-family: Arial;
+  touch-action: manipulation; /* Autorise seulement les taps/drags */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none; /* Désactive le menu contextuel iOS */
 }
 
 .main {
