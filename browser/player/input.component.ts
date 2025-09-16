@@ -28,6 +28,7 @@ export class InputComponent {
         activity();
       }, false);
       this.trackpad.addEventListener("touchmove", (event) => {
+        event.preventDefault(); // Évite les conflits avec d'autres touches
         const rect = this.trackpad!.getBoundingClientRect();
         ws.send(JSON.stringify({
           type: 'input',
@@ -36,8 +37,9 @@ export class InputComponent {
           y: (event.targetTouches[0].pageY - rect.top) / rect.height
         }));
         activity();
-      }, false);
+      }, {passive: false});
       this.trackpad.addEventListener("touchstart", (event) => {
+        event.preventDefault(); // Évite les conflits avec d'autres touches
         const rect = this.trackpad!.getBoundingClientRect();
         ws.send(JSON.stringify({
           type: 'input',
@@ -46,7 +48,7 @@ export class InputComponent {
           y: (event.targetTouches[0].pageY - rect.top) / rect.height
         }));
         activity();
-      }, false);
+      }, {passive: false});
       this.up.addEventListener("click", () => {
         ws.send(JSON.stringify({type: 'arrow', direction: 'U', key}));
         activity();
