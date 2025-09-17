@@ -102,11 +102,24 @@ export class AnalogStickComponent {
     const deltaX = currentTouchX - this.startTouchX;
     const deltaY = currentTouchY - this.startTouchY;
 
-    // Convertir le delta en position de stick (avec sensibilité) - CORRECTION ROTATION -90°
+    // Convertir le delta en position de stick (avec sensibilité)
     const sensitivity = 1.2; // Sensibilité du stick augmentée pour plus de fluidité
-    // Rotation de -90° pour corriger le décalage : haut→droite devient haut→haut
-    let newStickX = deltaY / sensitivity;   // Y devient X (rotation -90°)
-    let newStickY = -deltaX / sensitivity;  // -X devient Y (rotation -90°)
+
+    // Détecter si on est sur mobile en mode paysage
+    const isLandscape = window.innerWidth > window.innerHeight;
+    const isMobile = 'ontouchstart' in window;
+
+    let newStickX: number, newStickY: number;
+
+    if (isMobile && !isLandscape) {
+      // Mobile en portrait : correction -90° nécessaire (interface tournée par CSS)
+      newStickX = deltaY / sensitivity;   // Y devient X (rotation -90°)
+      newStickY = -deltaX / sensitivity;  // -X devient Y (rotation -90°)
+    } else {
+      // PC ou mobile paysage : pas de correction
+      newStickX = deltaX / sensitivity;   // Normal pour X
+      newStickY = deltaY / sensitivity;   // Normal pour Y
+    }
 
     // Calcul des dimensions
     const trackRect = this.track.getBoundingClientRect();
@@ -137,9 +150,10 @@ export class AnalogStickComponent {
 
     if (magnitude > this.deadZone) {
       const adjustedMagnitude = Math.min((magnitude - this.deadZone) / (1 - this.deadZone), 1);
-      const angle = Math.atan2(normalizedY, normalizedX);
-      moveX = Math.cos(angle) * adjustedMagnitude;
-      moveY = Math.sin(angle) * adjustedMagnitude;
+      // Utiliser directement les valeurs normalisées sans recalcul d'angle
+      const factor = adjustedMagnitude / magnitude;
+      moveX = normalizedX * factor;
+      moveY = normalizedY * factor;
 
       this.startContinuousMove(moveX, moveY);
     } else {

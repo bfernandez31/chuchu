@@ -183,21 +183,37 @@ html, body {
   }
 }
 
-.middle-arrows {
-  display: flex;
-  flex-direction: row;
-  gap: 20px;
+/* Positionnement des boutons dans la grille 3x3 */
+.btn-arrow-up {
+  grid-column: 2; /* Colonne du milieu */
+  grid-row: 1; /* Première ligne */
+}
+
+.btn-arrow-left {
+  grid-column: 1; /* Première colonne */
+  grid-row: 2; /* Ligne du milieu */
+}
+
+.btn-arrow-right {
+  grid-column: 3; /* Troisième colonne */
+  grid-row: 2; /* Ligne du milieu */
+}
+
+.btn-arrow-down {
+  grid-column: 2; /* Colonne du milieu */
+  grid-row: 3; /* Troisième ligne */
 }
 
 .pad {
   display: flex;
   flex-direction: row;
+  gap: 100px; /* Encore plus d'espace entre le stick et les boutons */
 
   .analog-stick-container {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 220px;
+    justify-content: flex-end; /* Pousse le stick vers la droite de son conteneur */
+    width: 280px; /* Conteneur plus large pour déplacer le stick vers la gauche */
     height: 220px;
   }
 
@@ -248,12 +264,14 @@ html, body {
   }
 
   .buttons {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
+    width: 180px; /* Largeur réduite pour rapprocher les boutons */
+    height: 180px; /* Hauteur réduite pour rapprocher les boutons */
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* 3 colonnes */
+    grid-template-rows: 1fr 1fr 1fr; /* 3 lignes */
+    gap: 8px; /* Gap réduit pour rapprocher les boutons */
     align-items: center;
-    justify-content: center;
-    gap: 20px;
+    justify-items: center;
   }
 }
 
@@ -261,12 +279,14 @@ html, body {
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 10; /* Z-index réduit pour éviter les conflits avec les boutons */
+  pointer-events: none; /* Désactive les clics sur la zone entière */
 
   & > img {
     height: 200px;
     width: auto;
     display: block;
+    pointer-events: auto; /* Réactive les clics uniquement sur l'image */
   }
 }
 
@@ -284,6 +304,13 @@ html, body {
     overflow: auto;
     background: inherit;
     z-index: 10;
+    /* Centrage amélioré */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 30px; /* Padding équilibré */
+    box-sizing: border-box;
+    /* Pas de margin-left, on laisse justify-content faire le travail */
   }
 
   body {
@@ -291,15 +318,6 @@ html, body {
   }
 
   .fork-me{
-    transform: rotate(90deg);
-    transform-origin: left bottom;
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    top: auto;
-    left: auto;
-    z-index: 1000;
-    /* Décaler vers le haut de la hauteur de l'image pour la rendre visible */
-    margin-bottom: 200px;
+    display: none; /* Complètement masqué en mode mobile pour éviter les clics parasites */
   }
 }
