@@ -290,34 +290,37 @@ html, body {
   }
 }
 
-/* Rotation de l'interface en mode portrait - Uniquement pour les appareils tactiles mobiles */
-@media (orientation: portrait) and (pointer: coarse) {
+/* Cache le lien GitHub sur mobile */
+@media (max-width: 768px), (pointer: coarse) {
+  .fork-me {
+    display: none !important;
+  }
+}
+
+/* Rotation de l'interface en mode portrait mobile */
+@media (orientation: portrait) and (max-width: 768px) {
   .main {
-    position: fixed;
-    top: -100vw;
-    left: 0;
+    transform: rotate(90deg);
+    transform-origin: center center;
     width: 100vh;
     height: 100vw;
-    transform: rotate(90deg);
-    transform-origin: left bottom;
-    /* Pour éviter les débordements */
-    overflow: auto;
-    background: inherit;
-    z-index: 10;
-    /* Centrage amélioré */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    margin-top: -50vw;
+    margin-left: -50vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 30px; /* Padding équilibré */
+    padding: 20px;
     box-sizing: border-box;
-    /* Pas de margin-left, on laisse justify-content faire le travail */
   }
 
   body {
     overflow: hidden;
   }
 
-  .fork-me{
-    display: none; /* Complètement masqué en mode mobile pour éviter les clics parasites */
+  .fork-me {
+    display: none !important;
   }
 }
