@@ -5,7 +5,7 @@ export class AnalogStickComponent {
   private centerX: number = 0;
   private centerY: number = 0;
   private maxRadius: number = 0;
-  private deadZone: number = 0.3; // Zone neutre de 30% pour poser le doigt
+  private deadZone: number = 0.05; // Zone neutre de 5% pour déclenchement très rapide
   private animationFrame: number | null = null;
   private moveInterval: any = null;
 
@@ -102,11 +102,11 @@ export class AnalogStickComponent {
     const deltaX = currentTouchX - this.startTouchX;
     const deltaY = currentTouchY - this.startTouchY;
 
-    // Convertir le delta en position de stick (avec sensibilité) - CORRIGER LA DIRECTION
-    const sensitivity = 2.0; // Sensibilité du stick
-    // D'après votre description: droite→haut, haut→droite, etc. Il faut juste inverser
-    let newStickX = deltaX / sensitivity;  // Normal pour X
-    let newStickY = deltaY / sensitivity;  // Normal pour Y
+    // Convertir le delta en position de stick (avec sensibilité) - CORRECTION ROTATION -90°
+    const sensitivity = 1.2; // Sensibilité du stick augmentée pour plus de fluidité
+    // Rotation de -90° pour corriger le décalage : haut→droite devient haut→haut
+    let newStickX = deltaY / sensitivity;   // Y devient X (rotation -90°)
+    let newStickY = -deltaX / sensitivity;  // -X devient Y (rotation -90°)
 
     // Calcul des dimensions
     const trackRect = this.track.getBoundingClientRect();
