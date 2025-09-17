@@ -5,9 +5,9 @@ export class AnalogStickComponent {
   private centerX: number = 0;
   private centerY: number = 0;
   private maxRadius: number = 0;
-  private deadZone: number = 0.05; // Zone neutre de 5% pour déclenchement très rapide
+  private deadZone: number = 0.03; // Zone neutre de 3% pour réactivité maximale
   private animationFrame: number | null = null;
-  private moveInterval: any = null;
+  private moveAnimationFrame: number | null = null;
 
   // Position normalisée du stick (-1 à 1)
   private currentX: number = 0;
@@ -16,6 +16,11 @@ export class AnalogStickComponent {
   // Position du curseur dans le jeu (0-1)
   private cursorX: number = 0.5;
   private cursorY: number = 0.5;
+
+  // Direction actuelle du mouvement
+  private moveDirectionX: number = 0;
+  private moveDirectionY: number = 0;
+  private isMoving: boolean = false;
 
   // Position de départ du touch pour calculer le delta
   private startTouchX: number = 0;
@@ -144,54 +149,27 @@ export class AnalogStickComponent {
     const magnitude = Math.sqrt(normalizedX * normalizedX + normalizedY * normalizedY);
 
 
-    // Zone morte et mouvement
-    let moveX = 0;
-    let moveY = 0;
-
+    // Zone morte et mouvement continu (comportement manette)
     if (magnitude > this.deadZone) {
       const adjustedMagnitude = Math.min((magnitude - this.deadZone) / (1 - this.deadZone), 1);
-      // Utiliser directement les valeurs normalisées sans recalcul d'angle
       const factor = adjustedMagnitude / magnitude;
-      moveX = normalizedX * factor;
-      moveY = normalizedY * factor;
+      const moveX = normalizedX * factor;
+      const moveY = normalizedY * factor;
 
-      this.startContinuousMove(moveX, moveY);
+      // Mettre à jour la direction de mouvement (pas de redémarrage de timer)
+      this.moveDirectionX = moveX;
+      this.moveDirectionY = moveY;
+
+      // Démarrer le mouvement si pas déjà en cours
+      if (!this.isMoving) {
+        this.startContinuousMove();
+      }
     } else {
       // Dans la zone morte - arrêter le mouvement
       this.stopContinuousMove();
     }
   }
 
-  private startContinuousMove(directionX: number, directionY: number) {
-    // Arrêter le mouvement précédent
-    this.stopContinuousMove();
-
-    if (Math.abs(directionX) < 0.01 && Math.abs(directionY) < 0.01) {
-      return; // Pas de mouvement
-    }
-
-    // Démarrer le mouvement continu
-    this.moveInterval = setInterval(() => {
-      // Vitesse de déplacement basée sur l'amplitude du stick
-      const speed = 0.015; // Vitesse de base
-      const deltaX = directionX * speed;
-      const deltaY = directionY * speed;
-
-      // Mettre à jour la position du curseur
-      this.cursorX = Math.max(0, Math.min(1, this.cursorX + deltaX));
-      this.cursorY = Math.max(0, Math.min(1, this.cursorY + deltaY));
-
-      // Envoyer la nouvelle position
-      this.onMove(this.cursorX, this.cursorY);
-    }, 16); // 60fps
-  }
-
-  private stopContinuousMove() {
-    if (this.moveInterval) {
-      clearInterval(this.moveInterval);
-      this.moveInterval = null;
-    }
-  }
 
   private handleEnd(event: MouseEvent | TouchEvent) {
     if (!this.isDragging) return;
@@ -212,7 +190,57 @@ export class AnalogStickComponent {
     // Position relative au centre du track (x et y sont déjà relatifs au centre)
     // CORRIGER : x et y sont les offsets depuis le centre
     this.knob.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+  }
 
+  private startContinuousMove() {
+    if (this.isMoving) return; // Déjà en mouvement
+
+    this.isMoving = true;
+    let lastTime = performance.now();
+
+    const moveLoop = (currentTime: number) => {
+      if (!this.isMoving) return;
+
+      // Calcul du delta time pour un mouvement frame-rate indépendant
+      const deltaTime = (currentTime - lastTime) / 16.67; // Normaliser par 60fps
+      lastTime = currentTime;
+
+      // Vitesse adaptative avec courbe d'accélération contrôlée
+      const baseSpeed = 0.035; // Vitesse initiale réduite (était 0.045)
+      const maxSpeed = 0.055; // Vitesse maximale pour éviter l'emballement
+      const magnitude = Math.sqrt(this.moveDirectionX * this.moveDirectionX + this.moveDirectionY * this.moveDirectionY);
+
+      // Courbe d'accélération plus douce : linear + léger boost
+      const speedMultiplier = 0.5 + (magnitude * 0.5); // De 0.5 à 1.0 (moins violent)
+      const rawSpeed = baseSpeed * speedMultiplier * deltaTime;
+      const speed = Math.min(rawSpeed, maxSpeed * deltaTime); // Cap à la vitesse max
+
+      // Calculer le déplacement
+      const deltaX = this.moveDirectionX * speed;
+      const deltaY = this.moveDirectionY * speed;
+
+      // Mettre à jour la position du curseur
+      this.cursorX = Math.max(0, Math.min(1, this.cursorX + deltaX));
+      this.cursorY = Math.max(0, Math.min(1, this.cursorY + deltaY));
+
+      // Envoyer la nouvelle position
+      this.onMove(this.cursorX, this.cursorY);
+
+      // Continuer la boucle
+      this.moveAnimationFrame = requestAnimationFrame(moveLoop);
+    };
+
+    this.moveAnimationFrame = requestAnimationFrame(moveLoop);
+  }
+
+  private stopContinuousMove() {
+    this.isMoving = false;
+    if (this.moveAnimationFrame) {
+      cancelAnimationFrame(this.moveAnimationFrame);
+      this.moveAnimationFrame = null;
+    }
+    this.moveDirectionX = 0;
+    this.moveDirectionY = 0;
   }
 
   private animateToCenter() {
@@ -256,6 +284,9 @@ export class AnalogStickComponent {
   destroy() {
     if (this.animationFrame) {
       cancelAnimationFrame(this.animationFrame);
+    }
+    if (this.moveAnimationFrame) {
+      cancelAnimationFrame(this.moveAnimationFrame);
     }
     this.stopContinuousMove();
   }
