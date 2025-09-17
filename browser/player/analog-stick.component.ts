@@ -210,8 +210,15 @@ export class AnalogStickComponent {
       const maxSpeed = 0.055; // Vitesse maximale pour éviter l'emballement
       const magnitude = Math.sqrt(this.moveDirectionX * this.moveDirectionX + this.moveDirectionY * this.moveDirectionY);
 
+      // Courbe de précision : plus lent près du centre pour le contrôle fin
+      let precisionMultiplier = 1.0;
+      if (magnitude < 0.3) {
+        // Zone de précision (30% du rayon) : ralentir progressivement
+        precisionMultiplier = 0.3 + (magnitude / 0.3) * 0.7; // De 0.3 à 1.0
+      }
+
       // Courbe d'accélération plus douce : linear + léger boost
-      const speedMultiplier = 0.5 + (magnitude * 0.5); // De 0.5 à 1.0 (moins violent)
+      const speedMultiplier = (0.5 + (magnitude * 0.5)) * precisionMultiplier;
       const rawSpeed = baseSpeed * speedMultiplier * deltaTime;
       const speed = Math.min(rawSpeed, maxSpeed * deltaTime); // Cap à la vitesse max
 

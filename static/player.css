@@ -213,8 +213,6 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: flex-end; /* Pousse le stick vers la droite de son conteneur */
-    width: 280px; /* Conteneur plus large pour déplacer le stick vers la gauche */
-    height: 220px;
   }
 
   .analog-stick-track {
