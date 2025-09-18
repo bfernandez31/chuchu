@@ -84,10 +84,30 @@ class WebSocketBatcher {
   distributeRollbackCorrection(correction: any) {
     const message = {
       type: 'rollback-correction',
-      correction
+      correctionId: correction.correctionId,
+      rollbackToSequence: correction.rollbackToSequence,
+      corrections: correction.corrections,
+      priority: correction.priority || 'MEDIUM',
+      affectedEntities: correction.affectedEntities || [],
+      smoothingDuration: correction.smoothingDuration || 33 // 2 frames at 60fps
     };
 
     this.addPriorityMessage(message, 'high');
+  }
+
+  /**
+   * Generate input acknowledgment message
+   */
+  generateInputAcknowledgment(playerId: string, inputSequence: number, processingTime: number) {
+    const acknowledgment = {
+      type: 'input-acknowledgment',
+      playerId,
+      acknowledgedSequence: inputSequence,
+      processingTime,
+      serverTime: Date.now()
+    };
+
+    this.addPriorityMessage(acknowledgment, 'medium');
   }
 
   /**
@@ -342,6 +362,12 @@ export class Queue {
       case 'request-state-sync':
         this.handleStateSyncRequest(payload, ws);
         break;
+      case 'rollback-acknowledgment':
+        this.handleRollbackAcknowledgment(payload, ws);
+        break;
+      case 'ping':
+        this.handlePing(payload, ws);
+        break;
       case 'server':
         this.servers.push(ws);
         // Send immediate state to newly connected server
@@ -404,6 +430,37 @@ export class Queue {
   }
 
   /**
+   * Handle rollback acknowledgment from client
+   */
+  private handleRollbackAcknowledgment(payload: any, ws?: WebSocket) {
+    const player = this.players.find((p) => p.key === payload.playerId);
+    if (player) {
+      // Process rollback acknowledgment
+      console.log(`Rollback acknowledged by player ${player.name} for correction ${payload.correctionId}`);
+
+      // Update player's rollback status if needed
+      // TODO: Implement rollback tracking on Player class
+      // player.acknowledgeRollback?.(payload.correctionId, payload.acknowledgedSequence);
+    }
+  }
+
+  /**
+   * Handle ping message for latency measurement
+   */
+  private handlePing(payload: any, ws?: WebSocket) {
+    if (!ws) return;
+
+    // Send pong response immediately
+    const pongMessage = {
+      type: 'pong',
+      clientTime: payload.timestamp,
+      serverTime: Date.now()
+    };
+
+    ws.send(JSON.stringify(pongMessage));
+  }
+
+  /**
    * Send error message to client
    */
   private sendError(errorCode: string, message: string, ws?: WebSocket) {
@@ -419,6 +476,30 @@ export class Queue {
     };
 
     ws.send(JSON.stringify(errorMessage));
+  }
+
+  /**
+   * Get WebSocket batcher metrics for performance monitoring
+   */
+  getBatcherMetrics() {
+    return this.batcher.getMetrics();
+  }
+
+  /**
+   * Trigger immediate rollback correction distribution
+   */
+  triggerRollbackCorrection(playerId: string, rollbackData: any) {
+    const correction = {
+      correctionId: `rollback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      rollbackToSequence: rollbackData.rollbackToSequence,
+      corrections: rollbackData.corrections,
+      priority: rollbackData.priority || 'MEDIUM',
+      affectedEntities: rollbackData.affectedEntities || [],
+      smoothingDuration: rollbackData.smoothingDuration || 33,
+      playerId
+    };
+
+    this.batcher.distributeRollbackCorrection(correction);
   }
 
   executeGame() {

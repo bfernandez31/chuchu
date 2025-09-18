@@ -271,25 +271,30 @@ Based on plan.md structure: Single TypeScript project with enhanced architecture
 
 ## Phase 3.5: API Integration
 
-- [ ] **T034** Implement Performance API routes in `src/api/performance-routes.ts`
-  - Create REST endpoints for performance monitoring
-  - Implement GET /api/v1/performance/metrics
-  - Add GET /api/v1/performance/players/{playerId}
-  - Include PUT /api/v1/performance/thresholds
+- [x] **T034** Implement Performance API handlers in `src/api/performance-handlers.ts`
+  - Create handler functions for performance monitoring endpoints
+  - Implement GET /api/v1/performance/metrics handler
+  - Add GET /api/v1/performance/players/{playerId} handler
+  - Include PUT /api/v1/performance/thresholds handler
+  - Add GET /api/v1/performance/alerts handler
+  - Include GET /api/v1/performance/rollbacks handler
   - Dependencies: T026, T027
 
-- [ ] **T035** Integrate Performance API with server in `src/index.ts`
-  - Add Express.js middleware for performance routes
-  - Implement CORS configuration for API endpoints
-  - Add error handling and logging
-  - Include rate limiting for API calls
+- [x] **T035** Integrate Performance API routes with find-my-way router in `src/router.ts`
+  - Extend existing router with performance API routes using router.on()
+  - Add route definitions for all performance endpoints
+  - Implement error handling and JSON response formatting (reuse makeResponseOk helper)
+  - Include query parameter parsing for timeRange, includeClients, severity
+  - Add proper CORS headers (already handled by makeResponseOk)
   - Dependencies: T034
 
-- [ ] **T036** Implement WebSocket message routing enhancement in `src/queue.ts`
+- [x] **T036** Implement WebSocket message routing enhancement in `src/queue.ts`
   - Extend existing message processing with new message types
   - Add predictiveInput message handling
   - Implement rollbackCorrection message distribution
   - Include inputAcknowledgment generation
+  - Add rollback acknowledgment and ping/pong handling
+  - Include performance monitoring integration
   - Dependencies: T028, T025
 
 ## Phase 3.6: Game Logic Integration

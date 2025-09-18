@@ -35,4 +35,12 @@ export type DataMsg = {
   type: 'request-state-sync',
   playerId: string,
   lastSequence: number
+} | {
+  type: 'rollback-acknowledgment',
+  playerId: string,
+  correctionId: string,
+  acknowledgedSequence: number
+} | {
+  type: 'ping',
+  timestamp: number
 };

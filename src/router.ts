@@ -2,6 +2,15 @@ import * as fs from "fs";
 import {Req, Res} from "find-my-way";
 import * as http from "http";
 import {CONFIG} from "../browser/common/config";
+import {
+  getPerformanceMetrics,
+  getPlayerPerformanceMetrics,
+  getPerformanceThresholds,
+  updatePerformanceThresholds,
+  getPerformanceAlerts,
+  getRollbackStatistics,
+  initializePerformanceHandlers
+} from "./api/performance-handlers";
 
 function getContentType(file: string) {
   if (file.endsWith('.html')) {
@@ -73,6 +82,81 @@ const start = () => {
     makeResponseOk(res, (JSON.parse(fs.readFileSync('.package.json', 'utf8')) ?? {version: "???"}).version);
   });
 
+  // Performance API routes
+  router.on(['OPTIONS', 'GET'], '/api/v1/performance/metrics', async (req: Req<any>, res: Res<any>, params: {
+    [k: string]: string | undefined
+  }) => {
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.statusCode = 200;
+      res.end();
+      return;
+    }
+    await getPerformanceMetrics(req, res, params);
+  });
+
+  router.on(['OPTIONS', 'GET'], '/api/v1/performance/players/:playerId', async (req: Req<any>, res: Res<any>, params: {
+    [k: string]: string | undefined
+  }) => {
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.statusCode = 200;
+      res.end();
+      return;
+    }
+    await getPlayerPerformanceMetrics(req, res, params);
+  });
+
+  router.on(['OPTIONS', 'GET', 'PUT'], '/api/v1/performance/thresholds', async (req: Req<any>, res: Res<any>, params: {
+    [k: string]: string | undefined
+  }) => {
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.statusCode = 200;
+      res.end();
+      return;
+    }
+    if (req.method === 'GET') {
+      await getPerformanceThresholds(req, res, params);
+    } else if (req.method === 'PUT') {
+      await updatePerformanceThresholds(req, res, params);
+    }
+  });
+
+  router.on(['OPTIONS', 'GET'], '/api/v1/performance/alerts', async (req: Req<any>, res: Res<any>, params: {
+    [k: string]: string | undefined
+  }) => {
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.statusCode = 200;
+      res.end();
+      return;
+    }
+    await getPerformanceAlerts(req, res, params);
+  });
+
+  router.on(['OPTIONS', 'GET'], '/api/v1/performance/rollbacks', async (req: Req<any>, res: Res<any>, params: {
+    [k: string]: string | undefined
+  }) => {
+    if (req.method === 'OPTIONS') {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+      res.statusCode = 200;
+      res.end();
+      return;
+    }
+    await getRollbackStatistics(req, res, params);
+  });
+
   const server = http.createServer((req, res) => {
     router.lookup(req, res);
   });
@@ -83,4 +167,4 @@ const start = () => {
   return {server, router};
 }
 
-export {start};
+export {start, initializePerformanceHandlers};
