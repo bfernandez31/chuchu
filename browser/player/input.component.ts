@@ -1,5 +1,5 @@
 import { AnalogStickComponent } from './analog-stick.component';
-import { PlayerInput } from '../../src/models/player-input';
+import { PlayerInput, InputData } from '../common/player-input';
 
 export interface InputMetrics {
   totalInputs: number;
@@ -389,7 +389,8 @@ export class InputComponent {
     const now = Date.now();
     const timeout = this.predictiveOptions.acknowledgmentTimeout;
 
-    for (const [sequence, timestamp] of this.pendingAcknowledgments.entries()) {
+    for (const entry of Array.from(this.pendingAcknowledgments.entries())) {
+      const [sequence, timestamp] = entry;
       if (now - timestamp > timeout) {
         this.pendingAcknowledgments.delete(sequence);
         this.inputMetrics.droppedInputs++;

@@ -299,14 +299,14 @@ Based on plan.md structure: Single TypeScript project with enhanced architecture
 
 ## Phase 3.6: Game Logic Integration
 
-- [ ] **T037** Integrate prediction engine with Game class in `src/game.ts`
+- [x] **T037** Integrate prediction engine with Game class in `src/game.ts`
   - Extend existing Game class with prediction support
   - Add authoritative state management
   - Implement delta state generation
   - Include performance metrics collection
   - Dependencies: T023, T026, T029
 
-- [ ] **T038** Enhance Player class with prediction in `src/player.ts`
+- [x] **T038** Enhance Player class with prediction in `src/player.ts`
   - Extend existing Player class with input buffering
   - Add prediction validation
   - Implement rollback coordination
@@ -446,4 +446,3 @@ The hybrid predictive rendering system implementation is complete when:
 - **Incremental commits**: Commit after each completed task
 - **Rollback strategy**: Each task is independently reversible
 - **Performance monitoring**: Continuous validation throughout implementation
-

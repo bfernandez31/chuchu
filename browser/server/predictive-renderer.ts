@@ -8,7 +8,7 @@
 import { GameDisplay } from './game.display';
 import { PredictiveGameState } from '../../src/models/predictive-game-state';
 import { AuthoritativeGameState } from '../../src/models/authoritative-game-state';
-import { PlayerInput } from '../../src/models/player-input';
+import { PlayerInput } from '../common/player-input';
 import { PredictionEngine } from '../../src/prediction/prediction-engine';
 import { RollbackManager } from '../../src/prediction/rollback-manager';
 
