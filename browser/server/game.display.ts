@@ -131,7 +131,7 @@ export class GameDisplay {
     this.renderLayers.forEach(layer => this.markLayerDirty(layer));
   }
 
-  previousPayload = {state: {players: []}};
+  previousPayload = {state: {players: [], cols: 0, rows: 0, strategy: {name: '', walls: []}}};
 
   display(newPayload: any) {
     const frameStartTime = performance.now();
