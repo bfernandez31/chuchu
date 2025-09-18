@@ -7,6 +7,7 @@ import {StrategyFactory} from "./generators/strategy/strategy-factory";
 import {Bot} from './bot';
 import {GameState} from "./messages_pb";
 import {PerformanceMonitor} from "./performance/performance-monitor";
+import {ServerOptimizer, ServerOptimizerManager} from "./performance/server-optimizer";
 import {PredictionEngine, PredictionEngineFactory} from "./prediction/prediction-engine";
 import {AuthoritativeGameState, AuthoritativeGameStateFactory, GamePhase, Entity, EntityType} from "./models/authoritative-game-state";
 import {DeltaCompression, DeltaCompressionManager} from "./networking/delta-compression";
@@ -23,6 +24,9 @@ export class Game {
   private lastPerformanceLog: number = 0;
   private performanceMonitor: PerformanceMonitor;
 
+  // T040: Server Optimization Integration
+  private serverOptimizer: ServerOptimizer;
+
   // T037: Prediction Engine Integration
   private predictionEngine: PredictionEngine;
   private authoritativeState: AuthoritativeGameState;
@@ -34,6 +38,17 @@ export class Game {
     this.queue = queue;
     this.currentStrategy = new StartingStrategy();
     this.performanceMonitor = new PerformanceMonitor();
+
+    // T040: Initialize server optimizer with performance monitor
+    this.serverOptimizer = ServerOptimizerManager.getInstance(this.performanceMonitor, {
+      autoOptimization: true,
+      aggressiveMode: false, // Conservative for production
+      cpuThreshold: 75,
+      memoryThreshold: 80,
+      enableMemoryLeakDetection: true,
+      enableConnectionPoolOptimization: true,
+      enableGCTuning: true
+    });
 
     // T037: Initialize prediction engine and authoritative state
     this.predictionEngine = PredictionEngineFactory.createHighPerformance();
@@ -76,6 +91,11 @@ export class Game {
           console.log('starting game execution...')
           this.currentStrategy = StrategyFactory.next(this.currentStrategy, this.players);
           this.currentStrategy.applySpeedCorrection();
+
+          // T040: Start server optimization monitoring
+          this.serverOptimizer.start();
+          console.log('🚀 Server optimizer started for game session');
+
           this.queue.doneWaiting();
           this.queue.executeGame();
           this.queue.sendQueueUpdate();
@@ -237,11 +257,20 @@ export class Game {
       // T037: Log prediction engine statistics
       const predictionStats = this.predictionEngine.getStatistics();
       console.log(`🔮 Prediction Stats - Total: ${predictionStats.totalPredictions}, Avg Accuracy: ${(predictionStats.averageAccuracy * 100).toFixed(1)}%`);
+
+      // T040: Log server optimization status
+      const optimizationStatus = this.serverOptimizer.getOptimizationStatus();
+      const improvements = optimizationStatus.performanceImprovements;
+      console.log(`🚀 Server Optimizer - CPU: -${improvements.cpuReduction.toFixed(1)}%, Memory: -${improvements.memoryReduction.toFixed(1)}%, Active Optimizations: ${optimizationStatus.activeOptimizations.length}`);
     }
   }
 
   clear() {
     this.currentStrategy = new StartingStrategy();
+
+    // T040: Stop server optimization monitoring when game ends
+    this.serverOptimizer.stop();
+    console.log('🛑 Server optimizer stopped for game session');
   }
 
   /**
@@ -440,5 +469,33 @@ export class Game {
            this.currentStrategy.goals.length +
            this.currentStrategy.walls.length +
            this.players.reduce((total, player) => total + player.arrows.length, 0);
+  }
+
+  /**
+   * T040: Get server optimization status and recommendations
+   */
+  getServerOptimizationStatus() {
+    return this.serverOptimizer.getOptimizationStatus();
+  }
+
+  /**
+   * T040: Force garbage collection for memory optimization
+   */
+  forceMemoryOptimization(): void {
+    this.serverOptimizer.forceGarbageCollection();
+  }
+
+  /**
+   * T040: Optimize connection pool manually
+   */
+  optimizeConnections(): void {
+    this.serverOptimizer.optimizeConnectionPool();
+  }
+
+  /**
+   * T040: Update server optimizer configuration
+   */
+  updateServerOptimizerConfig(config: any): void {
+    this.serverOptimizer.updateConfig(config);
   }
 }
