@@ -56,12 +56,102 @@ message QueueState {
   GameState state = 1;
 }
 
-// Message enveloppe pour WebSocket
+// Enhanced messages for hybrid predictive rendering
+
+// Delta compression for game state updates
+message DeltaGameState {
+  int64 baseSequence = 1;
+  int64 deltaSequence = 2;
+  int64 timestamp = 3;
+  repeated int32 changedPlayerIds = 4;
+  repeated PlayerState changedPlayers = 5;
+  repeated int32 changedEntityIds = 6;
+  repeated MovingObjectState changedEntities = 7;
+  float compressionRatio = 8;
+}
+
+// Client predictive input with timing
+message PredictiveInput {
+  string playerId = 1;
+  int64 sequence = 2;
+  int64 timestamp = 3;
+  string inputType = 4; // ARROW_PLACE, MOVE, ACTION
+  bytes inputData = 5; // serialized input data
+  float predictionConfidence = 6;
+}
+
+// Server rollback correction
+message RollbackCorrection {
+  string correctionId = 1;
+  int64 rollbackToSequence = 2;
+  int64 timestamp = 3;
+  repeated string affectedPlayerIds = 4;
+  repeated PlayerState corrections = 5;
+  string priority = 6; // MINOR, MODERATE, MAJOR
+  int32 smoothingDurationMs = 7;
+}
+
+// Input acknowledgment from server
+message InputAcknowledgment {
+  string playerId = 1;
+  int64 acknowledgedSequence = 2;
+  int64 timestamp = 3;
+  int32 processingTimeMs = 4;
+  bool accepted = 5;
+  string rejectionReason = 6;
+}
+
+// Performance metrics
+message PerformanceMetrics {
+  // Server metrics
+  float serverCpuUsage = 1;
+  int64 serverMemoryMB = 2;
+  int32 activeConnections = 3;
+  float averageLatencyMs = 4;
+
+  // Game metrics
+  float currentFPS = 5;
+  int32 playersCount = 6;
+  int64 gameStateSize = 7;
+  float compressionRatio = 8;
+
+  // Network metrics
+  float bandwidthUsageKbps = 9;
+  int32 messagesPerSecond = 10;
+  float packetLossRate = 11;
+
+  // Client metrics (when reported)
+  float clientFPS = 12;
+  float inputLatencyMs = 13;
+  float renderTimeMs = 14;
+  int64 clientMemoryMB = 15;
+
+  int64 timestamp = 16;
+}
+
+// Enhanced server message envelope
 message ServerMessage {
   oneof payload {
     GameState game = 1;
     ScoreState score = 2;
     QueueState queue = 3;
+    DeltaGameState deltaGame = 4;
+    RollbackCorrection rollback = 5;
+    InputAcknowledgment inputAck = 6;
+    PerformanceMetrics metrics = 7;
   }
-  string type = 10; // "GAME_", "SC_", "QU_" ...
+  string type = 10; // "GAME_", "SC_", "QU_", "DELTA_", "ROLLBACK_", "ACK_", "METRICS_"
+  int64 sequence = 11;
+  int64 timestamp = 12;
+}
+
+// Enhanced client message envelope
+message ClientMessage {
+  oneof payload {
+    PredictiveInput input = 1;
+    PerformanceMetrics clientMetrics = 2;
+  }
+  string type = 10; // "INPUT_", "METRICS_"
+  int64 sequence = 11;
+  int64 timestamp = 12;
 }

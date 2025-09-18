@@ -713,11 +713,844 @@ function _decodeQueueState(bb: ByteBuffer): QueueState {
   return message;
 }
 
+export interface DeltaGameState {
+  baseSequence?: Long;
+  deltaSequence?: Long;
+  timestamp?: Long;
+  changedPlayerIds?: number[];
+  changedPlayers?: PlayerState[];
+  changedEntityIds?: number[];
+  changedEntities?: MovingObjectState[];
+  compressionRatio?: number;
+}
+
+export function encodeDeltaGameState(message: DeltaGameState): Uint8Array {
+  let bb = popByteBuffer();
+  _encodeDeltaGameState(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodeDeltaGameState(message: DeltaGameState, bb: ByteBuffer): void {
+  // optional int64 baseSequence = 1;
+  let $baseSequence = message.baseSequence;
+  if ($baseSequence !== undefined) {
+    writeVarint32(bb, 8);
+    writeVarint64(bb, $baseSequence);
+  }
+
+  // optional int64 deltaSequence = 2;
+  let $deltaSequence = message.deltaSequence;
+  if ($deltaSequence !== undefined) {
+    writeVarint32(bb, 16);
+    writeVarint64(bb, $deltaSequence);
+  }
+
+  // optional int64 timestamp = 3;
+  let $timestamp = message.timestamp;
+  if ($timestamp !== undefined) {
+    writeVarint32(bb, 24);
+    writeVarint64(bb, $timestamp);
+  }
+
+  // repeated int32 changedPlayerIds = 4;
+  let array$changedPlayerIds = message.changedPlayerIds;
+  if (array$changedPlayerIds !== undefined) {
+    let packed = popByteBuffer();
+    for (let value of array$changedPlayerIds) {
+      writeVarint64(packed, intToLong(value));
+    }
+    writeVarint32(bb, 34);
+    writeVarint32(bb, packed.offset);
+    writeByteBuffer(bb, packed);
+    pushByteBuffer(packed);
+  }
+
+  // repeated PlayerState changedPlayers = 5;
+  let array$changedPlayers = message.changedPlayers;
+  if (array$changedPlayers !== undefined) {
+    for (let value of array$changedPlayers) {
+      writeVarint32(bb, 42);
+      let nested = popByteBuffer();
+      _encodePlayerState(value, nested);
+      writeVarint32(bb, nested.limit);
+      writeByteBuffer(bb, nested);
+      pushByteBuffer(nested);
+    }
+  }
+
+  // repeated int32 changedEntityIds = 6;
+  let array$changedEntityIds = message.changedEntityIds;
+  if (array$changedEntityIds !== undefined) {
+    let packed = popByteBuffer();
+    for (let value of array$changedEntityIds) {
+      writeVarint64(packed, intToLong(value));
+    }
+    writeVarint32(bb, 50);
+    writeVarint32(bb, packed.offset);
+    writeByteBuffer(bb, packed);
+    pushByteBuffer(packed);
+  }
+
+  // repeated MovingObjectState changedEntities = 7;
+  let array$changedEntities = message.changedEntities;
+  if (array$changedEntities !== undefined) {
+    for (let value of array$changedEntities) {
+      writeVarint32(bb, 58);
+      let nested = popByteBuffer();
+      _encodeMovingObjectState(value, nested);
+      writeVarint32(bb, nested.limit);
+      writeByteBuffer(bb, nested);
+      pushByteBuffer(nested);
+    }
+  }
+
+  // optional float compressionRatio = 8;
+  let $compressionRatio = message.compressionRatio;
+  if ($compressionRatio !== undefined) {
+    writeVarint32(bb, 69);
+    writeFloat(bb, $compressionRatio);
+  }
+}
+
+export function decodeDeltaGameState(binary: Uint8Array): DeltaGameState {
+  return _decodeDeltaGameState(wrapByteBuffer(binary));
+}
+
+function _decodeDeltaGameState(bb: ByteBuffer): DeltaGameState {
+  let message: DeltaGameState = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional int64 baseSequence = 1;
+      case 1: {
+        message.baseSequence = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 deltaSequence = 2;
+      case 2: {
+        message.deltaSequence = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 timestamp = 3;
+      case 3: {
+        message.timestamp = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // repeated int32 changedPlayerIds = 4;
+      case 4: {
+        let values = message.changedPlayerIds || (message.changedPlayerIds = []);
+        if ((tag & 7) === 2) {
+          let outerLimit = pushTemporaryLength(bb);
+          while (!isAtEnd(bb)) {
+            values.push(readVarint32(bb));
+          }
+          bb.limit = outerLimit;
+        } else {
+          values.push(readVarint32(bb));
+        }
+        break;
+      }
+
+      // repeated PlayerState changedPlayers = 5;
+      case 5: {
+        let limit = pushTemporaryLength(bb);
+        let values = message.changedPlayers || (message.changedPlayers = []);
+        values.push(_decodePlayerState(bb));
+        bb.limit = limit;
+        break;
+      }
+
+      // repeated int32 changedEntityIds = 6;
+      case 6: {
+        let values = message.changedEntityIds || (message.changedEntityIds = []);
+        if ((tag & 7) === 2) {
+          let outerLimit = pushTemporaryLength(bb);
+          while (!isAtEnd(bb)) {
+            values.push(readVarint32(bb));
+          }
+          bb.limit = outerLimit;
+        } else {
+          values.push(readVarint32(bb));
+        }
+        break;
+      }
+
+      // repeated MovingObjectState changedEntities = 7;
+      case 7: {
+        let limit = pushTemporaryLength(bb);
+        let values = message.changedEntities || (message.changedEntities = []);
+        values.push(_decodeMovingObjectState(bb));
+        bb.limit = limit;
+        break;
+      }
+
+      // optional float compressionRatio = 8;
+      case 8: {
+        message.compressionRatio = readFloat(bb);
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
+export interface PredictiveInput {
+  playerId?: string;
+  sequence?: Long;
+  timestamp?: Long;
+  inputType?: string;
+  inputData?: Uint8Array;
+  predictionConfidence?: number;
+}
+
+export function encodePredictiveInput(message: PredictiveInput): Uint8Array {
+  let bb = popByteBuffer();
+  _encodePredictiveInput(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodePredictiveInput(message: PredictiveInput, bb: ByteBuffer): void {
+  // optional string playerId = 1;
+  let $playerId = message.playerId;
+  if ($playerId !== undefined) {
+    writeVarint32(bb, 10);
+    writeString(bb, $playerId);
+  }
+
+  // optional int64 sequence = 2;
+  let $sequence = message.sequence;
+  if ($sequence !== undefined) {
+    writeVarint32(bb, 16);
+    writeVarint64(bb, $sequence);
+  }
+
+  // optional int64 timestamp = 3;
+  let $timestamp = message.timestamp;
+  if ($timestamp !== undefined) {
+    writeVarint32(bb, 24);
+    writeVarint64(bb, $timestamp);
+  }
+
+  // optional string inputType = 4;
+  let $inputType = message.inputType;
+  if ($inputType !== undefined) {
+    writeVarint32(bb, 34);
+    writeString(bb, $inputType);
+  }
+
+  // optional bytes inputData = 5;
+  let $inputData = message.inputData;
+  if ($inputData !== undefined) {
+    writeVarint32(bb, 42);
+    writeVarint32(bb, $inputData.length), writeBytes(bb, $inputData);
+  }
+
+  // optional float predictionConfidence = 6;
+  let $predictionConfidence = message.predictionConfidence;
+  if ($predictionConfidence !== undefined) {
+    writeVarint32(bb, 53);
+    writeFloat(bb, $predictionConfidence);
+  }
+}
+
+export function decodePredictiveInput(binary: Uint8Array): PredictiveInput {
+  return _decodePredictiveInput(wrapByteBuffer(binary));
+}
+
+function _decodePredictiveInput(bb: ByteBuffer): PredictiveInput {
+  let message: PredictiveInput = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional string playerId = 1;
+      case 1: {
+        message.playerId = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional int64 sequence = 2;
+      case 2: {
+        message.sequence = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 timestamp = 3;
+      case 3: {
+        message.timestamp = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional string inputType = 4;
+      case 4: {
+        message.inputType = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional bytes inputData = 5;
+      case 5: {
+        message.inputData = readBytes(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional float predictionConfidence = 6;
+      case 6: {
+        message.predictionConfidence = readFloat(bb);
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
+export interface RollbackCorrection {
+  correctionId?: string;
+  rollbackToSequence?: Long;
+  timestamp?: Long;
+  affectedPlayerIds?: string[];
+  corrections?: PlayerState[];
+  priority?: string;
+  smoothingDurationMs?: number;
+}
+
+export function encodeRollbackCorrection(message: RollbackCorrection): Uint8Array {
+  let bb = popByteBuffer();
+  _encodeRollbackCorrection(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodeRollbackCorrection(message: RollbackCorrection, bb: ByteBuffer): void {
+  // optional string correctionId = 1;
+  let $correctionId = message.correctionId;
+  if ($correctionId !== undefined) {
+    writeVarint32(bb, 10);
+    writeString(bb, $correctionId);
+  }
+
+  // optional int64 rollbackToSequence = 2;
+  let $rollbackToSequence = message.rollbackToSequence;
+  if ($rollbackToSequence !== undefined) {
+    writeVarint32(bb, 16);
+    writeVarint64(bb, $rollbackToSequence);
+  }
+
+  // optional int64 timestamp = 3;
+  let $timestamp = message.timestamp;
+  if ($timestamp !== undefined) {
+    writeVarint32(bb, 24);
+    writeVarint64(bb, $timestamp);
+  }
+
+  // repeated string affectedPlayerIds = 4;
+  let array$affectedPlayerIds = message.affectedPlayerIds;
+  if (array$affectedPlayerIds !== undefined) {
+    for (let value of array$affectedPlayerIds) {
+      writeVarint32(bb, 34);
+      writeString(bb, value);
+    }
+  }
+
+  // repeated PlayerState corrections = 5;
+  let array$corrections = message.corrections;
+  if (array$corrections !== undefined) {
+    for (let value of array$corrections) {
+      writeVarint32(bb, 42);
+      let nested = popByteBuffer();
+      _encodePlayerState(value, nested);
+      writeVarint32(bb, nested.limit);
+      writeByteBuffer(bb, nested);
+      pushByteBuffer(nested);
+    }
+  }
+
+  // optional string priority = 6;
+  let $priority = message.priority;
+  if ($priority !== undefined) {
+    writeVarint32(bb, 50);
+    writeString(bb, $priority);
+  }
+
+  // optional int32 smoothingDurationMs = 7;
+  let $smoothingDurationMs = message.smoothingDurationMs;
+  if ($smoothingDurationMs !== undefined) {
+    writeVarint32(bb, 56);
+    writeVarint64(bb, intToLong($smoothingDurationMs));
+  }
+}
+
+export function decodeRollbackCorrection(binary: Uint8Array): RollbackCorrection {
+  return _decodeRollbackCorrection(wrapByteBuffer(binary));
+}
+
+function _decodeRollbackCorrection(bb: ByteBuffer): RollbackCorrection {
+  let message: RollbackCorrection = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional string correctionId = 1;
+      case 1: {
+        message.correctionId = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional int64 rollbackToSequence = 2;
+      case 2: {
+        message.rollbackToSequence = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 timestamp = 3;
+      case 3: {
+        message.timestamp = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // repeated string affectedPlayerIds = 4;
+      case 4: {
+        let values = message.affectedPlayerIds || (message.affectedPlayerIds = []);
+        values.push(readString(bb, readVarint32(bb)));
+        break;
+      }
+
+      // repeated PlayerState corrections = 5;
+      case 5: {
+        let limit = pushTemporaryLength(bb);
+        let values = message.corrections || (message.corrections = []);
+        values.push(_decodePlayerState(bb));
+        bb.limit = limit;
+        break;
+      }
+
+      // optional string priority = 6;
+      case 6: {
+        message.priority = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional int32 smoothingDurationMs = 7;
+      case 7: {
+        message.smoothingDurationMs = readVarint32(bb);
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
+export interface InputAcknowledgment {
+  playerId?: string;
+  acknowledgedSequence?: Long;
+  timestamp?: Long;
+  processingTimeMs?: number;
+  accepted?: boolean;
+  rejectionReason?: string;
+}
+
+export function encodeInputAcknowledgment(message: InputAcknowledgment): Uint8Array {
+  let bb = popByteBuffer();
+  _encodeInputAcknowledgment(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodeInputAcknowledgment(message: InputAcknowledgment, bb: ByteBuffer): void {
+  // optional string playerId = 1;
+  let $playerId = message.playerId;
+  if ($playerId !== undefined) {
+    writeVarint32(bb, 10);
+    writeString(bb, $playerId);
+  }
+
+  // optional int64 acknowledgedSequence = 2;
+  let $acknowledgedSequence = message.acknowledgedSequence;
+  if ($acknowledgedSequence !== undefined) {
+    writeVarint32(bb, 16);
+    writeVarint64(bb, $acknowledgedSequence);
+  }
+
+  // optional int64 timestamp = 3;
+  let $timestamp = message.timestamp;
+  if ($timestamp !== undefined) {
+    writeVarint32(bb, 24);
+    writeVarint64(bb, $timestamp);
+  }
+
+  // optional int32 processingTimeMs = 4;
+  let $processingTimeMs = message.processingTimeMs;
+  if ($processingTimeMs !== undefined) {
+    writeVarint32(bb, 32);
+    writeVarint64(bb, intToLong($processingTimeMs));
+  }
+
+  // optional bool accepted = 5;
+  let $accepted = message.accepted;
+  if ($accepted !== undefined) {
+    writeVarint32(bb, 40);
+    writeByte(bb, $accepted ? 1 : 0);
+  }
+
+  // optional string rejectionReason = 6;
+  let $rejectionReason = message.rejectionReason;
+  if ($rejectionReason !== undefined) {
+    writeVarint32(bb, 50);
+    writeString(bb, $rejectionReason);
+  }
+}
+
+export function decodeInputAcknowledgment(binary: Uint8Array): InputAcknowledgment {
+  return _decodeInputAcknowledgment(wrapByteBuffer(binary));
+}
+
+function _decodeInputAcknowledgment(bb: ByteBuffer): InputAcknowledgment {
+  let message: InputAcknowledgment = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional string playerId = 1;
+      case 1: {
+        message.playerId = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional int64 acknowledgedSequence = 2;
+      case 2: {
+        message.acknowledgedSequence = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 timestamp = 3;
+      case 3: {
+        message.timestamp = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int32 processingTimeMs = 4;
+      case 4: {
+        message.processingTimeMs = readVarint32(bb);
+        break;
+      }
+
+      // optional bool accepted = 5;
+      case 5: {
+        message.accepted = !!readByte(bb);
+        break;
+      }
+
+      // optional string rejectionReason = 6;
+      case 6: {
+        message.rejectionReason = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
+export interface PerformanceMetrics {
+  serverCpuUsage?: number;
+  serverMemoryMB?: Long;
+  activeConnections?: number;
+  averageLatencyMs?: number;
+  currentFPS?: number;
+  playersCount?: number;
+  gameStateSize?: Long;
+  compressionRatio?: number;
+  bandwidthUsageKbps?: number;
+  messagesPerSecond?: number;
+  packetLossRate?: number;
+  clientFPS?: number;
+  inputLatencyMs?: number;
+  renderTimeMs?: number;
+  clientMemoryMB?: Long;
+  timestamp?: Long;
+}
+
+export function encodePerformanceMetrics(message: PerformanceMetrics): Uint8Array {
+  let bb = popByteBuffer();
+  _encodePerformanceMetrics(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodePerformanceMetrics(message: PerformanceMetrics, bb: ByteBuffer): void {
+  // optional float serverCpuUsage = 1;
+  let $serverCpuUsage = message.serverCpuUsage;
+  if ($serverCpuUsage !== undefined) {
+    writeVarint32(bb, 13);
+    writeFloat(bb, $serverCpuUsage);
+  }
+
+  // optional int64 serverMemoryMB = 2;
+  let $serverMemoryMB = message.serverMemoryMB;
+  if ($serverMemoryMB !== undefined) {
+    writeVarint32(bb, 16);
+    writeVarint64(bb, $serverMemoryMB);
+  }
+
+  // optional int32 activeConnections = 3;
+  let $activeConnections = message.activeConnections;
+  if ($activeConnections !== undefined) {
+    writeVarint32(bb, 24);
+    writeVarint64(bb, intToLong($activeConnections));
+  }
+
+  // optional float averageLatencyMs = 4;
+  let $averageLatencyMs = message.averageLatencyMs;
+  if ($averageLatencyMs !== undefined) {
+    writeVarint32(bb, 37);
+    writeFloat(bb, $averageLatencyMs);
+  }
+
+  // optional float currentFPS = 5;
+  let $currentFPS = message.currentFPS;
+  if ($currentFPS !== undefined) {
+    writeVarint32(bb, 45);
+    writeFloat(bb, $currentFPS);
+  }
+
+  // optional int32 playersCount = 6;
+  let $playersCount = message.playersCount;
+  if ($playersCount !== undefined) {
+    writeVarint32(bb, 48);
+    writeVarint64(bb, intToLong($playersCount));
+  }
+
+  // optional int64 gameStateSize = 7;
+  let $gameStateSize = message.gameStateSize;
+  if ($gameStateSize !== undefined) {
+    writeVarint32(bb, 56);
+    writeVarint64(bb, $gameStateSize);
+  }
+
+  // optional float compressionRatio = 8;
+  let $compressionRatio = message.compressionRatio;
+  if ($compressionRatio !== undefined) {
+    writeVarint32(bb, 69);
+    writeFloat(bb, $compressionRatio);
+  }
+
+  // optional float bandwidthUsageKbps = 9;
+  let $bandwidthUsageKbps = message.bandwidthUsageKbps;
+  if ($bandwidthUsageKbps !== undefined) {
+    writeVarint32(bb, 77);
+    writeFloat(bb, $bandwidthUsageKbps);
+  }
+
+  // optional int32 messagesPerSecond = 10;
+  let $messagesPerSecond = message.messagesPerSecond;
+  if ($messagesPerSecond !== undefined) {
+    writeVarint32(bb, 80);
+    writeVarint64(bb, intToLong($messagesPerSecond));
+  }
+
+  // optional float packetLossRate = 11;
+  let $packetLossRate = message.packetLossRate;
+  if ($packetLossRate !== undefined) {
+    writeVarint32(bb, 93);
+    writeFloat(bb, $packetLossRate);
+  }
+
+  // optional float clientFPS = 12;
+  let $clientFPS = message.clientFPS;
+  if ($clientFPS !== undefined) {
+    writeVarint32(bb, 101);
+    writeFloat(bb, $clientFPS);
+  }
+
+  // optional float inputLatencyMs = 13;
+  let $inputLatencyMs = message.inputLatencyMs;
+  if ($inputLatencyMs !== undefined) {
+    writeVarint32(bb, 109);
+    writeFloat(bb, $inputLatencyMs);
+  }
+
+  // optional float renderTimeMs = 14;
+  let $renderTimeMs = message.renderTimeMs;
+  if ($renderTimeMs !== undefined) {
+    writeVarint32(bb, 117);
+    writeFloat(bb, $renderTimeMs);
+  }
+
+  // optional int64 clientMemoryMB = 15;
+  let $clientMemoryMB = message.clientMemoryMB;
+  if ($clientMemoryMB !== undefined) {
+    writeVarint32(bb, 120);
+    writeVarint64(bb, $clientMemoryMB);
+  }
+
+  // optional int64 timestamp = 16;
+  let $timestamp = message.timestamp;
+  if ($timestamp !== undefined) {
+    writeVarint32(bb, 128);
+    writeVarint64(bb, $timestamp);
+  }
+}
+
+export function decodePerformanceMetrics(binary: Uint8Array): PerformanceMetrics {
+  return _decodePerformanceMetrics(wrapByteBuffer(binary));
+}
+
+function _decodePerformanceMetrics(bb: ByteBuffer): PerformanceMetrics {
+  let message: PerformanceMetrics = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional float serverCpuUsage = 1;
+      case 1: {
+        message.serverCpuUsage = readFloat(bb);
+        break;
+      }
+
+      // optional int64 serverMemoryMB = 2;
+      case 2: {
+        message.serverMemoryMB = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int32 activeConnections = 3;
+      case 3: {
+        message.activeConnections = readVarint32(bb);
+        break;
+      }
+
+      // optional float averageLatencyMs = 4;
+      case 4: {
+        message.averageLatencyMs = readFloat(bb);
+        break;
+      }
+
+      // optional float currentFPS = 5;
+      case 5: {
+        message.currentFPS = readFloat(bb);
+        break;
+      }
+
+      // optional int32 playersCount = 6;
+      case 6: {
+        message.playersCount = readVarint32(bb);
+        break;
+      }
+
+      // optional int64 gameStateSize = 7;
+      case 7: {
+        message.gameStateSize = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional float compressionRatio = 8;
+      case 8: {
+        message.compressionRatio = readFloat(bb);
+        break;
+      }
+
+      // optional float bandwidthUsageKbps = 9;
+      case 9: {
+        message.bandwidthUsageKbps = readFloat(bb);
+        break;
+      }
+
+      // optional int32 messagesPerSecond = 10;
+      case 10: {
+        message.messagesPerSecond = readVarint32(bb);
+        break;
+      }
+
+      // optional float packetLossRate = 11;
+      case 11: {
+        message.packetLossRate = readFloat(bb);
+        break;
+      }
+
+      // optional float clientFPS = 12;
+      case 12: {
+        message.clientFPS = readFloat(bb);
+        break;
+      }
+
+      // optional float inputLatencyMs = 13;
+      case 13: {
+        message.inputLatencyMs = readFloat(bb);
+        break;
+      }
+
+      // optional float renderTimeMs = 14;
+      case 14: {
+        message.renderTimeMs = readFloat(bb);
+        break;
+      }
+
+      // optional int64 clientMemoryMB = 15;
+      case 15: {
+        message.clientMemoryMB = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 timestamp = 16;
+      case 16: {
+        message.timestamp = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
 export interface ServerMessage {
   game?: GameState;
   score?: ScoreState;
   queue?: QueueState;
+  deltaGame?: DeltaGameState;
+  rollback?: RollbackCorrection;
+  inputAck?: InputAcknowledgment;
+  metrics?: PerformanceMetrics;
   type?: string;
+  sequence?: Long;
+  timestamp?: Long;
 }
 
 export function encodeServerMessage(message: ServerMessage): Uint8Array {
@@ -760,11 +1593,69 @@ function _encodeServerMessage(message: ServerMessage, bb: ByteBuffer): void {
     pushByteBuffer(nested);
   }
 
+  // optional DeltaGameState deltaGame = 4;
+  let $deltaGame = message.deltaGame;
+  if ($deltaGame !== undefined) {
+    writeVarint32(bb, 34);
+    let nested = popByteBuffer();
+    _encodeDeltaGameState($deltaGame, nested);
+    writeVarint32(bb, nested.limit);
+    writeByteBuffer(bb, nested);
+    pushByteBuffer(nested);
+  }
+
+  // optional RollbackCorrection rollback = 5;
+  let $rollback = message.rollback;
+  if ($rollback !== undefined) {
+    writeVarint32(bb, 42);
+    let nested = popByteBuffer();
+    _encodeRollbackCorrection($rollback, nested);
+    writeVarint32(bb, nested.limit);
+    writeByteBuffer(bb, nested);
+    pushByteBuffer(nested);
+  }
+
+  // optional InputAcknowledgment inputAck = 6;
+  let $inputAck = message.inputAck;
+  if ($inputAck !== undefined) {
+    writeVarint32(bb, 50);
+    let nested = popByteBuffer();
+    _encodeInputAcknowledgment($inputAck, nested);
+    writeVarint32(bb, nested.limit);
+    writeByteBuffer(bb, nested);
+    pushByteBuffer(nested);
+  }
+
+  // optional PerformanceMetrics metrics = 7;
+  let $metrics = message.metrics;
+  if ($metrics !== undefined) {
+    writeVarint32(bb, 58);
+    let nested = popByteBuffer();
+    _encodePerformanceMetrics($metrics, nested);
+    writeVarint32(bb, nested.limit);
+    writeByteBuffer(bb, nested);
+    pushByteBuffer(nested);
+  }
+
   // optional string type = 10;
   let $type = message.type;
   if ($type !== undefined) {
     writeVarint32(bb, 82);
     writeString(bb, $type);
+  }
+
+  // optional int64 sequence = 11;
+  let $sequence = message.sequence;
+  if ($sequence !== undefined) {
+    writeVarint32(bb, 88);
+    writeVarint64(bb, $sequence);
+  }
+
+  // optional int64 timestamp = 12;
+  let $timestamp = message.timestamp;
+  if ($timestamp !== undefined) {
+    writeVarint32(bb, 96);
+    writeVarint64(bb, $timestamp);
   }
 }
 
@@ -806,9 +1697,168 @@ function _decodeServerMessage(bb: ByteBuffer): ServerMessage {
         break;
       }
 
+      // optional DeltaGameState deltaGame = 4;
+      case 4: {
+        let limit = pushTemporaryLength(bb);
+        message.deltaGame = _decodeDeltaGameState(bb);
+        bb.limit = limit;
+        break;
+      }
+
+      // optional RollbackCorrection rollback = 5;
+      case 5: {
+        let limit = pushTemporaryLength(bb);
+        message.rollback = _decodeRollbackCorrection(bb);
+        bb.limit = limit;
+        break;
+      }
+
+      // optional InputAcknowledgment inputAck = 6;
+      case 6: {
+        let limit = pushTemporaryLength(bb);
+        message.inputAck = _decodeInputAcknowledgment(bb);
+        bb.limit = limit;
+        break;
+      }
+
+      // optional PerformanceMetrics metrics = 7;
+      case 7: {
+        let limit = pushTemporaryLength(bb);
+        message.metrics = _decodePerformanceMetrics(bb);
+        bb.limit = limit;
+        break;
+      }
+
       // optional string type = 10;
       case 10: {
         message.type = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional int64 sequence = 11;
+      case 11: {
+        message.sequence = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 timestamp = 12;
+      case 12: {
+        message.timestamp = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      default:
+        skipUnknownField(bb, tag & 7);
+    }
+  }
+
+  return message;
+}
+
+export interface ClientMessage {
+  input?: PredictiveInput;
+  clientMetrics?: PerformanceMetrics;
+  type?: string;
+  sequence?: Long;
+  timestamp?: Long;
+}
+
+export function encodeClientMessage(message: ClientMessage): Uint8Array {
+  let bb = popByteBuffer();
+  _encodeClientMessage(message, bb);
+  return toUint8Array(bb);
+}
+
+function _encodeClientMessage(message: ClientMessage, bb: ByteBuffer): void {
+  // optional PredictiveInput input = 1;
+  let $input = message.input;
+  if ($input !== undefined) {
+    writeVarint32(bb, 10);
+    let nested = popByteBuffer();
+    _encodePredictiveInput($input, nested);
+    writeVarint32(bb, nested.limit);
+    writeByteBuffer(bb, nested);
+    pushByteBuffer(nested);
+  }
+
+  // optional PerformanceMetrics clientMetrics = 2;
+  let $clientMetrics = message.clientMetrics;
+  if ($clientMetrics !== undefined) {
+    writeVarint32(bb, 18);
+    let nested = popByteBuffer();
+    _encodePerformanceMetrics($clientMetrics, nested);
+    writeVarint32(bb, nested.limit);
+    writeByteBuffer(bb, nested);
+    pushByteBuffer(nested);
+  }
+
+  // optional string type = 10;
+  let $type = message.type;
+  if ($type !== undefined) {
+    writeVarint32(bb, 82);
+    writeString(bb, $type);
+  }
+
+  // optional int64 sequence = 11;
+  let $sequence = message.sequence;
+  if ($sequence !== undefined) {
+    writeVarint32(bb, 88);
+    writeVarint64(bb, $sequence);
+  }
+
+  // optional int64 timestamp = 12;
+  let $timestamp = message.timestamp;
+  if ($timestamp !== undefined) {
+    writeVarint32(bb, 96);
+    writeVarint64(bb, $timestamp);
+  }
+}
+
+export function decodeClientMessage(binary: Uint8Array): ClientMessage {
+  return _decodeClientMessage(wrapByteBuffer(binary));
+}
+
+function _decodeClientMessage(bb: ByteBuffer): ClientMessage {
+  let message: ClientMessage = {} as any;
+
+  end_of_message: while (!isAtEnd(bb)) {
+    let tag = readVarint32(bb);
+
+    switch (tag >>> 3) {
+      case 0:
+        break end_of_message;
+
+      // optional PredictiveInput input = 1;
+      case 1: {
+        let limit = pushTemporaryLength(bb);
+        message.input = _decodePredictiveInput(bb);
+        bb.limit = limit;
+        break;
+      }
+
+      // optional PerformanceMetrics clientMetrics = 2;
+      case 2: {
+        let limit = pushTemporaryLength(bb);
+        message.clientMetrics = _decodePerformanceMetrics(bb);
+        bb.limit = limit;
+        break;
+      }
+
+      // optional string type = 10;
+      case 10: {
+        message.type = readString(bb, readVarint32(bb));
+        break;
+      }
+
+      // optional int64 sequence = 11;
+      case 11: {
+        message.sequence = readVarint64(bb, /* unsigned */ false);
+        break;
+      }
+
+      // optional int64 timestamp = 12;
+      case 12: {
+        message.timestamp = readVarint64(bb, /* unsigned */ false);
         break;
       }
 
