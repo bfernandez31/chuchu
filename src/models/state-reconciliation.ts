@@ -87,6 +87,22 @@ export interface StateReconciliation {
   // Input replay management
   setupInputReplay(startSequence: number, inputs: PlayerInput[]): void;
   completeInputReplay(): void;
+
+  // Correction management
+  addEntityCorrection(
+    entityId: string,
+    type: CorrectionType,
+    previousValue: any,
+    correctedValue: any,
+    confidence?: number
+  ): void;
+  addPlayerCorrection(
+    playerId: string,
+    previousScore: number,
+    correctedScore: number,
+    previousArrowCount: number,
+    correctedArrowCount: number
+  ): void;
 }
 
 export class StateReconciliationImpl implements StateReconciliation {
