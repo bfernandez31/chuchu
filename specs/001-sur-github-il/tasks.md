@@ -225,21 +225,21 @@ Based on plan.md structure: Single TypeScript project with enhanced architecture
 
 ### Enhanced Networking
 
-- [ ] **T028** Enhance WebSocketBatcher in `src/queue.ts`
+- [x] **T028** Enhance WebSocketBatcher in `src/queue.ts`
   - Extend existing WebSocketBatcher with delta compression
   - Implement adaptive batching (5ms → variable delay)
   - Add priority-based message handling
   - Include compression ratio tracking
   - Dependencies: T005, T006, T007, T008
 
-- [ ] **T029** Implement DeltaCompression in `src/networking/delta-compression.ts`
+- [x] **T029** Implement DeltaCompression in `src/networking/delta-compression.ts`
   - Create delta state calculation algorithms
   - Implement protobuf field presence optimization
   - Add change detection for players and entities
   - Include compression efficiency monitoring
   - Dependencies: T018, T028
 
-- [ ] **T030** Implement NetworkOptimizer in `src/networking/network-optimizer.ts`
+- [x] **T030** Implement NetworkOptimizer in `src/networking/network-optimizer.ts`
   - Create adaptive tick rate management (50Hz → 20Hz)
   - Implement bandwidth usage optimization
   - Add connection quality monitoring
