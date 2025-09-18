@@ -1,7 +1,8 @@
 // Prediction engine exports
-export * from './prediction-engine';
-export * from './interpolation-service';
-export * from './rollback-manager';
+// TODO: Implement these modules in T023-T025
+// export * from './prediction-engine';
+// export * from './interpolation-service';
+// export * from './rollback-manager';
 
 // Prediction system configuration
 export const PREDICTION_CONFIG = {

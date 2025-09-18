@@ -1,6 +1,7 @@
 // Networking optimization exports
-export * from './delta-compression';
-export * from './network-optimizer';
+// TODO: Implement these modules in T028-T030
+// export * from './delta-compression';
+// export * from './network-optimizer';
 
 // Network optimization configuration
 export const NETWORK_CONFIG = {

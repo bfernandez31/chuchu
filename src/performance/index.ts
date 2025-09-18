@@ -1,6 +1,7 @@
 // Performance monitoring exports
-export * from './performance-monitor';
-export * from './metrics-collector';
+// TODO: Implement these modules in T026-T027
+// export * from './performance-monitor';
+// export * from './metrics-collector';
 
 // Performance monitoring configuration
 export const PERFORMANCE_CONFIG = {
@@ -59,12 +60,20 @@ export const BrowserPerformance = {
         if (currentTime - lastTime >= 1000) {
           const fps = frameCount * 1000 / (currentTime - lastTime);
           resolve(fps);
+        } else if (typeof globalThis !== 'undefined' && 'requestAnimationFrame' in globalThis) {
+          (globalThis as any).requestAnimationFrame(measureFrames);
         } else {
-          requestAnimationFrame(measureFrames);
+          // Fallback for Node.js environment
+          setTimeout(measureFrames, 16);
         }
       };
 
-      requestAnimationFrame(measureFrames);
+      if (typeof globalThis !== 'undefined' && 'requestAnimationFrame' in globalThis) {
+        (globalThis as any).requestAnimationFrame(measureFrames);
+      } else {
+        // Fallback for Node.js environment
+        setTimeout(measureFrames, 16);
+      }
     });
   }
 };

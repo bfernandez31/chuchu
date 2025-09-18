@@ -1,9 +1,10 @@
 // Model exports for hybrid predictive rendering system
-export * from './authoritative-game-state';
-export * from './predictive-game-state';
-export * from './player-input';
-export * from './state-reconciliation';
-export * from './performance-metrics';
+// TODO: Implement these modules in T018-T022
+// export * from './authoritative-game-state';
+// export * from './predictive-game-state';
+// export * from './player-input';
+// export * from './state-reconciliation';
+// export * from './performance-metrics';
 
 // Type definitions for enhanced game state management
 export type GamePhase = 'WAITING' | 'ACTIVE' | 'ENDING';

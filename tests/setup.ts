@@ -2,7 +2,7 @@
 import { jest } from '@jest/globals';
 
 // Mock WebSocket for testing
-global.WebSocket = jest.fn(() => ({
+(global as any).WebSocket = jest.fn(() => ({
   send: jest.fn(),
   close: jest.fn(),
   addEventListener: jest.fn(),
@@ -12,11 +12,11 @@ global.WebSocket = jest.fn(() => ({
   OPEN: 1,
   CLOSING: 2,
   CLOSED: 3
-})) as any;
+}));
 
 // Mock Performance API for Node.js environment
 if (typeof performance === 'undefined') {
-  global.performance = {
+  (global as any).performance = {
     now: () => Date.now(),
     mark: jest.fn(),
     measure: jest.fn(),
@@ -24,14 +24,14 @@ if (typeof performance === 'undefined') {
     getEntriesByType: jest.fn(() => []),
     clearMarks: jest.fn(),
     clearMeasures: jest.fn()
-  } as any;
+  };
 }
 
 // Set up test timeouts and global configurations
 jest.setTimeout(10000);
 
 // Global test utilities
-global.createMockGameState = () => ({
+(global as any).createMockGameState = () => ({
   sequence: 1,
   timestamp: Date.now(),
   players: [],
@@ -39,7 +39,7 @@ global.createMockGameState = () => ({
   gamePhase: 'ACTIVE' as const
 });
 
-global.createMockPlayerInput = () => ({
+(global as any).createMockPlayerInput = () => ({
   playerId: 'test-player',
   sequence: 1,
   timestamp: Date.now(),
@@ -48,7 +48,7 @@ global.createMockPlayerInput = () => ({
 });
 
 // Performance testing helpers
-global.measurePerformance = async (fn: () => Promise<void> | void): Promise<number> => {
+(global as any).measurePerformance = async (fn: () => Promise<void> | void): Promise<number> => {
   const start = performance.now();
   await fn();
   return performance.now() - start;
