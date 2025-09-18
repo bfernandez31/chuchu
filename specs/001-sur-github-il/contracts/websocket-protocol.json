@@ -1,0 +1,300 @@
+{
+  "title": "Hybrid Predictive Rendering WebSocket Protocol",
+  "version": "2.0.0",
+  "description": "Enhanced WebSocket message protocol for client-server communication with predictive rendering support",
+  "baseUrl": "ws://localhost:3000",
+
+  "messageTypes": {
+    "clientToServer": {
+      "predictiveInput": {
+        "type": "object",
+        "required": ["type", "playerId", "input", "prediction"],
+        "properties": {
+          "type": { "const": "predictive-input" },
+          "playerId": { "type": "string" },
+          "input": {
+            "type": "object",
+            "required": ["timestamp", "sequence", "inputType", "data"],
+            "properties": {
+              "timestamp": { "type": "number" },
+              "sequence": { "type": "number" },
+              "inputType": { "enum": ["ARROW_PLACE", "MOVE", "ACTION"] },
+              "data": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "position": { "$ref": "#/definitions/Position" },
+                      "direction": { "$ref": "#/definitions/Direction" }
+                    },
+                    "required": ["position", "direction"]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "direction": { "$ref": "#/definitions/Direction" }
+                    },
+                    "required": ["direction"]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "action": { "type": "string" }
+                    },
+                    "required": ["action"]
+                  }
+                ]
+              }
+            }
+          },
+          "prediction": {
+            "type": "object",
+            "required": ["predictionId", "expectedOutcome", "confidence"],
+            "properties": {
+              "predictionId": { "type": "string" },
+              "expectedOutcome": { "type": "string" },
+              "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          }
+        }
+      },
+
+      "performanceReport": {
+        "type": "object",
+        "required": ["type", "playerId", "metrics"],
+        "properties": {
+          "type": { "const": "performance-report" },
+          "playerId": { "type": "string" },
+          "metrics": {
+            "type": "object",
+            "required": ["frameRate", "frameTime", "predictionAccuracy", "networkLatency"],
+            "properties": {
+              "frameRate": { "type": "number", "minimum": 1, "maximum": 120 },
+              "frameTime": { "type": "number", "minimum": 0 },
+              "predictionAccuracy": { "type": "number", "minimum": 0, "maximum": 100 },
+              "rollbackFrequency": { "type": "number", "minimum": 0 },
+              "networkLatency": { "type": "number", "minimum": 0, "maximum": 1000 },
+              "memoryUsage": { "type": "number", "minimum": 0 }
+            }
+          }
+        }
+      },
+
+      "requestStateSync": {
+        "type": "object",
+        "required": ["type", "playerId", "lastSequence"],
+        "properties": {
+          "type": { "const": "request-state-sync" },
+          "playerId": { "type": "string" },
+          "lastSequence": { "type": "number" }
+        }
+      }
+    },
+
+    "serverToClient": {
+      "deltaGameState": {
+        "type": "object",
+        "required": ["type", "delta", "timestamp"],
+        "properties": {
+          "type": { "const": "delta-game-state" },
+          "delta": {
+            "type": "object",
+            "required": ["baseSequence", "deltaSequence", "timestamp"],
+            "properties": {
+              "baseSequence": { "type": "number" },
+              "deltaSequence": { "type": "number" },
+              "timestamp": { "type": "number" },
+              "changedPlayers": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/PlayerDelta" }
+              },
+              "changedEntities": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/EntityDelta" }
+              },
+              "newArrows": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/Arrow" }
+              },
+              "removedEntityIds": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "compressionRatio": { "type": "number", "minimum": 0, "maximum": 1 }
+            }
+          },
+          "timestamp": { "type": "number" }
+        }
+      },
+
+      "rollbackCorrection": {
+        "type": "object",
+        "required": ["type", "correction"],
+        "properties": {
+          "type": { "const": "rollback-correction" },
+          "correction": {
+            "type": "object",
+            "required": ["correctionId", "rollbackToSequence", "corrections"],
+            "properties": {
+              "correctionId": { "type": "string" },
+              "affectedEntities": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "rollbackToSequence": { "type": "number" },
+              "corrections": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/EntityCorrection" }
+              },
+              "replayInputs": {
+                "type": "array",
+                "items": { "$ref": "#/definitions/PlayerInput" }
+              },
+              "priority": { "enum": ["LOW", "MEDIUM", "HIGH"] }
+            }
+          }
+        }
+      },
+
+      "inputAcknowledgment": {
+        "type": "object",
+        "required": ["type", "playerId", "acknowledgedSequence"],
+        "properties": {
+          "type": { "const": "input-acknowledgment" },
+          "playerId": { "type": "string" },
+          "acknowledgedSequence": { "type": "number" },
+          "processingTime": { "type": "number" }
+        }
+      },
+
+      "performanceBroadcast": {
+        "type": "object",
+        "required": ["type", "serverMetrics"],
+        "properties": {
+          "type": { "const": "performance-broadcast" },
+          "serverMetrics": {
+            "type": "object",
+            "required": ["tickRate", "cpuUsage", "activeConnections"],
+            "properties": {
+              "tickRate": { "type": "number", "minimum": 1, "maximum": 60 },
+              "cpuUsage": { "type": "number", "minimum": 0, "maximum": 100 },
+              "memoryUsage": { "type": "number", "minimum": 0 },
+              "activeConnections": { "type": "number", "minimum": 0, "maximum": 32 },
+              "messagesSent": { "type": "number", "minimum": 0 },
+              "messagesReceived": { "type": "number", "minimum": 0 }
+            }
+          },
+          "gamePerformance": {
+            "type": "object",
+            "properties": {
+              "averageLatency": { "type": "number" },
+              "totalRollbacks": { "type": "number" },
+              "predictionAccuracy": { "type": "number", "minimum": 0, "maximum": 100 }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "definitions": {
+    "Position": {
+      "type": "object",
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+
+    "Direction": {
+      "enum": ["UP", "DOWN", "LEFT", "RIGHT"]
+    },
+
+    "PlayerDelta": {
+      "type": "object",
+      "required": ["playerId"],
+      "properties": {
+        "playerId": { "type": "string" },
+        "position": { "$ref": "#/definitions/Position" },
+        "score": { "type": "number" },
+        "status": { "type": "string" },
+        "color": { "type": "string" }
+      }
+    },
+
+    "EntityDelta": {
+      "type": "object",
+      "required": ["entityId"],
+      "properties": {
+        "entityId": { "type": "string" },
+        "entityType": { "enum": ["MOUSE", "CAT", "WALL", "GOAL"] },
+        "position": { "$ref": "#/definitions/Position" },
+        "direction": { "$ref": "#/definitions/Direction" },
+        "velocity": { "$ref": "#/definitions/Position" },
+        "status": { "type": "string" }
+      }
+    },
+
+    "Arrow": {
+      "type": "object",
+      "required": ["id", "position", "direction", "playerId"],
+      "properties": {
+        "id": { "type": "string" },
+        "position": { "$ref": "#/definitions/Position" },
+        "direction": { "$ref": "#/definitions/Direction" },
+        "playerId": { "type": "string" },
+        "timestamp": { "type": "number" }
+      }
+    },
+
+    "EntityCorrection": {
+      "type": "object",
+      "required": ["entityId", "correctionType", "newValue"],
+      "properties": {
+        "entityId": { "type": "string" },
+        "correctionType": { "enum": ["POSITION", "VELOCITY", "STATE", "CREATION"] },
+        "newValue": {},
+        "smoothingDuration": { "type": "number", "minimum": 16, "maximum": 50 }
+      }
+    },
+
+    "PlayerInput": {
+      "type": "object",
+      "required": ["playerId", "timestamp", "sequence", "inputType"],
+      "properties": {
+        "playerId": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "sequence": { "type": "number" },
+        "inputType": { "enum": ["ARROW_PLACE", "MOVE", "ACTION"] },
+        "data": {},
+        "predicted": { "type": "boolean" },
+        "acknowledged": { "type": "boolean" }
+      }
+    }
+  },
+
+  "rateLimits": {
+    "predictiveInput": {
+      "maxPerSecond": 60,
+      "burstLimit": 10
+    },
+    "performanceReport": {
+      "maxPerSecond": 2,
+      "burstLimit": 1
+    },
+    "requestStateSync": {
+      "maxPerSecond": 5,
+      "burstLimit": 2
+    }
+  },
+
+  "errorCodes": {
+    "INVALID_MESSAGE_FORMAT": 4001,
+    "RATE_LIMIT_EXCEEDED": 4002,
+    "INVALID_PLAYER_ID": 4003,
+    "SEQUENCE_OUT_OF_ORDER": 4004,
+    "PREDICTION_FAILED": 4005,
+    "SERVER_OVERLOAD": 4006
+  }
+}

@@ -15,6 +15,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing and Linting
 No formal test suite or linting commands are configured. The project uses TypeScript compilation for type checking.
 
+### Hybrid Predictive Rendering Commands (Feature Branch: 001-sur-github-il)
+- `npm run test:integration:hybrid` - Run hybrid rendering integration tests
+- `npm run test:performance` - Performance validation tests for predictive rendering
+- `npm run monitor:performance` - Launch performance monitoring dashboard
+
 ## Code Architecture
 
 ChuChuV2 is a real-time multiplayer game inspired by ChuChu Rocket!, supporting up to 32 concurrent players. The architecture follows a client-server model with WebSocket communication.
@@ -97,6 +102,24 @@ Configuration is managed through:
 3. **Strategy Pattern**: Pluggable game modes and AI behaviors
 4. **Component Pattern**: Browser UI built as reusable components
 5. **State Machine**: Game phases and player states
+
+### Hybrid Predictive Rendering Architecture (Under Development)
+
+#### Core Components
+- **PredictionEngine** (`src/prediction/`): Client-side state prediction and interpolation
+- **RollbackManager** (`src/prediction/`): Handles prediction corrections and rollback netcode
+- **PerformanceMonitor** (`src/performance/`): Real-time metrics collection and monitoring
+- **DeltaCompression** (`src/networking/`): Efficient state synchronization and bandwidth optimization
+
+#### Enhanced Communication
+- **Enhanced WebSocket Protocol**: Supports delta compression, prediction validation, and rollback corrections
+- **Performance API** (`/api/v1/performance`): RESTful endpoints for performance monitoring
+- **Predictive Input Messages**: Timestamped input with prediction metadata for rollback calculations
+
+#### Client-Side Enhancements
+- **Multi-Layer Canvas Rendering**: Background caching, entity layer optimization, predictive rendering overlay
+- **State Interpolation**: Smooth transitions between server states using linear interpolation and velocity prediction
+- **Local Input Prediction**: Immediate visual feedback while awaiting server validation
 
 ### File Structure Notes
 

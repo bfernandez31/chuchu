@@ -1,0 +1,604 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Hybrid Rendering Performance API",
+    "version": "1.0.0",
+    "description": "REST API for performance monitoring and metrics collection in the hybrid predictive rendering system"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api/v1",
+      "description": "Development server"
+    }
+  ],
+  "paths": {
+    "/performance/metrics": {
+      "get": {
+        "summary": "Get current system performance metrics",
+        "description": "Retrieve aggregated performance metrics for monitoring dashboard",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "in": "query",
+            "description": "Time range for metrics aggregation",
+            "schema": {
+              "type": "string",
+              "enum": ["1m", "5m", "15m", "1h"],
+              "default": "5m"
+            }
+          },
+          {
+            "name": "includeClients",
+            "in": "query",
+            "description": "Include client-side metrics in response",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Performance metrics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceMetricsResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/performance/thresholds": {
+      "get": {
+        "summary": "Get performance threshold configuration",
+        "description": "Retrieve current performance thresholds and alerts configuration",
+        "responses": {
+          "200": {
+            "description": "Thresholds retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceThresholds"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update performance thresholds",
+        "description": "Update performance monitoring thresholds and alert configuration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PerformanceThresholds"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Thresholds updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerformanceThresholds"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid threshold values",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/performance/players/{playerId}": {
+      "get": {
+        "summary": "Get player-specific performance metrics",
+        "description": "Retrieve performance metrics for a specific player",
+        "parameters": [
+          {
+            "name": "playerId",
+            "in": "path",
+            "required": true,
+            "description": "Unique player identifier",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "timeRange",
+            "in": "query",
+            "description": "Time range for metrics",
+            "schema": {
+              "type": "string",
+              "enum": ["1m", "5m", "15m", "1h"],
+              "default": "5m"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Player metrics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlayerPerformanceMetrics"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Player not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/performance/alerts": {
+      "get": {
+        "summary": "Get active performance alerts",
+        "description": "Retrieve currently active performance alerts",
+        "parameters": [
+          {
+            "name": "severity",
+            "in": "query",
+            "description": "Filter alerts by severity",
+            "schema": {
+              "type": "string",
+              "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Alerts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PerformanceAlert"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/performance/rollbacks": {
+      "get": {
+        "summary": "Get rollback statistics",
+        "description": "Retrieve rollback frequency and accuracy statistics",
+        "parameters": [
+          {
+            "name": "timeRange",
+            "in": "query",
+            "description": "Time range for rollback analysis",
+            "schema": {
+              "type": "string",
+              "enum": ["1m", "5m", "15m", "1h"],
+              "default": "15m"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Rollback statistics retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollbackStatistics"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "components": {
+    "schemas": {
+      "PerformanceMetricsResponse": {
+        "type": "object",
+        "required": ["server", "game", "network", "timestamp"],
+        "properties": {
+          "server": {
+            "$ref": "#/components/schemas/ServerMetrics"
+          },
+          "game": {
+            "$ref": "#/components/schemas/GameMetrics"
+          },
+          "network": {
+            "$ref": "#/components/schemas/NetworkMetrics"
+          },
+          "clients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClientMetrics"
+            }
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "timeRange": {
+            "type": "string"
+          }
+        }
+      },
+
+      "ServerMetrics": {
+        "type": "object",
+        "required": ["cpuUsage", "memoryUsage", "tickRate", "activeConnections"],
+        "properties": {
+          "cpuUsage": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "CPU usage percentage"
+          },
+          "memoryUsage": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Memory usage in MB"
+          },
+          "tickRate": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 60,
+            "description": "Current server tick rate"
+          },
+          "activeConnections": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 32,
+            "description": "Number of active connections"
+          },
+          "uptime": {
+            "type": "number",
+            "description": "Server uptime in seconds"
+          }
+        }
+      },
+
+      "GameMetrics": {
+        "type": "object",
+        "required": ["averageLatency", "totalRollbacks", "predictionAccuracy"],
+        "properties": {
+          "averageLatency": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Average network latency in ms"
+          },
+          "totalRollbacks": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total rollback events"
+          },
+          "predictionAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Prediction accuracy percentage"
+          },
+          "frameRate": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120,
+            "description": "Target frame rate"
+          },
+          "activePlayers": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 32,
+            "description": "Currently active players"
+          }
+        }
+      },
+
+      "NetworkMetrics": {
+        "type": "object",
+        "required": ["messagesSent", "messagesReceived", "bandwidthUsage"],
+        "properties": {
+          "messagesSent": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Messages sent per second"
+          },
+          "messagesReceived": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Messages received per second"
+          },
+          "bandwidthUsage": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Current bandwidth usage in KB/s"
+          },
+          "compressionRatio": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Message compression efficiency"
+          },
+          "deltaUpdates": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Delta updates sent"
+          }
+        }
+      },
+
+      "ClientMetrics": {
+        "type": "object",
+        "required": ["playerId", "frameRate", "frameTime", "networkLatency"],
+        "properties": {
+          "playerId": {
+            "type": "string",
+            "description": "Unique player identifier"
+          },
+          "frameRate": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 120,
+            "description": "Client frame rate"
+          },
+          "frameTime": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Average frame time in ms"
+          },
+          "networkLatency": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Round-trip latency in ms"
+          },
+          "predictionAccuracy": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Client prediction accuracy"
+          },
+          "rollbackFrequency": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Rollbacks per second"
+          },
+          "memoryUsage": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Client memory usage in MB"
+          }
+        }
+      },
+
+      "PlayerPerformanceMetrics": {
+        "type": "object",
+        "required": ["playerId", "metrics", "history"],
+        "properties": {
+          "playerId": {
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/ClientMetrics"
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "timestamp": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "frameRate": {
+                  "type": "number"
+                },
+                "latency": {
+                  "type": "number"
+                },
+                "rollbacks": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "PerformanceThresholds": {
+        "type": "object",
+        "required": ["frameRate", "latency", "rollbackRate", "cpuUsage"],
+        "properties": {
+          "frameRate": {
+            "type": "object",
+            "properties": {
+              "warning": {
+                "type": "number",
+                "default": 45
+              },
+              "critical": {
+                "type": "number",
+                "default": 30
+              }
+            }
+          },
+          "latency": {
+            "type": "object",
+            "properties": {
+              "warning": {
+                "type": "number",
+                "default": 200
+              },
+              "critical": {
+                "type": "number",
+                "default": 500
+              }
+            }
+          },
+          "rollbackRate": {
+            "type": "object",
+            "properties": {
+              "warning": {
+                "type": "number",
+                "default": 5
+              },
+              "critical": {
+                "type": "number",
+                "default": 10
+              }
+            }
+          },
+          "cpuUsage": {
+            "type": "object",
+            "properties": {
+              "warning": {
+                "type": "number",
+                "default": 70
+              },
+              "critical": {
+                "type": "number",
+                "default": 90
+              }
+            }
+          }
+        }
+      },
+
+      "PerformanceAlert": {
+        "type": "object",
+        "required": ["id", "severity", "metric", "message", "timestamp"],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+          },
+          "metric": {
+            "type": "string",
+            "description": "The metric that triggered the alert"
+          },
+          "message": {
+            "type": "string",
+            "description": "Human-readable alert message"
+          },
+          "currentValue": {
+            "type": "number",
+            "description": "Current value of the metric"
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Threshold that was exceeded"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "affectedPlayers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+
+      "RollbackStatistics": {
+        "type": "object",
+        "required": ["totalRollbacks", "rollbackRate", "averageDistance", "accuracyImprovement"],
+        "properties": {
+          "totalRollbacks": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Total rollback events in time range"
+          },
+          "rollbackRate": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Rollbacks per minute"
+          },
+          "averageDistance": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Average rollback distance in frames"
+          },
+          "accuracyImprovement": {
+            "type": "number",
+            "description": "Prediction accuracy improvement percentage"
+          },
+          "byPlayer": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "playerId": {
+                  "type": "string"
+                },
+                "rollbacks": {
+                  "type": "integer"
+                },
+                "accuracy": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error", "message"],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "details": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  }
+}
