@@ -268,7 +268,7 @@ export class InterpolationService {
     for (const interpolation of Array.from(this.activeInterpolations.values())) {
       totalDuration += interpolation.duration;
       const type = (interpolation as any).type || InterpolationType.LINEAR;
-      interpolationsByType[type]++;
+      interpolationsByType[type as keyof typeof interpolationsByType]++;
     }
 
     const averageDuration = activeCount > 0 ? totalDuration / activeCount : 0;

@@ -248,21 +248,21 @@ Based on plan.md structure: Single TypeScript project with enhanced architecture
 
 ## Phase 3.4: Enhanced Client-Side Rendering
 
-- [ ] **T031** Enhance GameDisplay with multi-layer rendering in `browser/server/game.display.ts`
+- [x] **T031** Enhance GameDisplay with multi-layer rendering in `browser/server/game.display.ts`
   - Extend existing GameDisplay class with layer separation
   - Implement background layer caching optimization
   - Add predictive rendering overlay
   - Include 60 FPS performance optimization
   - Dependencies: T023, T024
 
-- [ ] **T032** Implement PredictiveRenderer in `browser/server/predictive-renderer.ts`
+- [x] **T032** Implement PredictiveRenderer in `browser/server/predictive-renderer.ts`
   - Create client-side prediction rendering
   - Implement smooth interpolation display
   - Add local input immediate feedback
   - Include rollback visual correction
   - Dependencies: T025, T031
 
-- [ ] **T033** [P] Enhance player input handling in `browser/player/input.component.ts`
+- [x] **T033** [P] Enhance player input handling in `browser/player/input.component.ts`
   - Extend existing input component with prediction
   - Add timestamped input generation
   - Implement immediate visual feedback

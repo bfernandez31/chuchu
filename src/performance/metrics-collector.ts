@@ -5,6 +5,56 @@
  * FPS calculation, frame time tracking, and memory usage monitoring.
  */
 
+// Type declarations for browser APIs (to avoid TypeScript errors in Node.js)
+declare global {
+  interface Performance {
+    now(): number;
+    mark(name: string): void;
+    measure(name: string, startMark?: string, endMark?: string): void;
+    getEntriesByType(type: string): PerformanceEntry[];
+    clearMarks(name?: string): void;
+    clearMeasures(name?: string): void;
+  }
+
+  interface Window {
+    performance: Performance & {
+      memory?: {
+        usedJSHeapSize: number;
+        totalJSHeapSize: number;
+        jsHeapSizeLimit: number;
+      };
+    };
+    cancelAnimationFrame: (id: number) => void;
+  }
+
+  function requestAnimationFrame(callback: (time: number) => void): number;
+
+  interface PerformanceObserver {
+    observe(options: { entryTypes: string[] }): void;
+    disconnect(): void;
+  }
+
+  const PerformanceObserver: {
+    new (callback: (list: any) => void): PerformanceObserver;
+  };
+
+  interface PerformanceEntry {
+    name: string;
+    entryType: string;
+    startTime: number;
+    duration: number;
+  }
+
+  interface PerformanceResourceTiming extends PerformanceEntry {
+    transferSize: number;
+    encodedBodySize: number;
+    decodedBodySize: number;
+    requestStart: number;
+    responseStart: number;
+    responseEnd: number;
+  }
+}
+
 import { ClientMetrics, ServerMetrics } from '../models/performance-metrics';
 
 export enum CollectorEnvironment {
@@ -108,8 +158,8 @@ export class MetricsCollector {
   public stop(): void {
     // Stop frame monitoring
     if (this.animationFrameId) {
-      if (typeof window !== 'undefined' && window.cancelAnimationFrame) {
-        window.cancelAnimationFrame(this.animationFrameId);
+      if (typeof globalThis !== 'undefined' && (globalThis as any).window?.cancelAnimationFrame) {
+        (globalThis as any).window.cancelAnimationFrame(this.animationFrameId);
       }
       this.animationFrameId = null;
     }
@@ -341,9 +391,9 @@ export class MetricsCollector {
     memorySnapshots: MemorySnapshot[];
     networkTimings: NetworkTimingData[];
     statistics: {
-      frameStats: ReturnType<typeof this.getFrameTimingStats>;
-      memoryStats: ReturnType<typeof this.getMemoryStats>;
-      networkStats: ReturnType<typeof this.getNetworkStats>;
+      frameStats: any;
+      memoryStats: any;
+      networkStats: any;
     };
   } {
     return {
@@ -362,9 +412,12 @@ export class MetricsCollector {
   // Private methods
 
   private detectEnvironment(): CollectorEnvironment {
-    if (typeof window !== 'undefined' && typeof process !== 'undefined') {
+    const hasWindow = typeof globalThis !== 'undefined' && (globalThis as any).window;
+    const hasProcess = typeof (globalThis as any).process !== 'undefined';
+
+    if (hasWindow && hasProcess) {
       return CollectorEnvironment.HYBRID;
-    } else if (typeof window !== 'undefined') {
+    } else if (hasWindow) {
       return CollectorEnvironment.BROWSER;
     } else {
       return CollectorEnvironment.NODE;
@@ -426,7 +479,7 @@ export class MetricsCollector {
   }
 
   private startFrameMonitoring(): void {
-    if (typeof window === 'undefined') return;
+    if (typeof globalThis === 'undefined' || !(globalThis as any).window) return;
 
     const frameCallback = (timestamp: number) => {
       const frameTime = this.lastFrameTime > 0 ? timestamp - this.lastFrameTime : 16.67;
@@ -528,8 +581,9 @@ export class MetricsCollector {
     };
 
     // Browser memory API
-    if (typeof window !== 'undefined' && (window.performance as any).memory) {
-      const memory = (window.performance as any).memory;
+    if (typeof globalThis !== 'undefined' &&
+        (globalThis as any).window?.performance?.memory) {
+      const memory = (globalThis as any).window.performance.memory;
       snapshot = {
         timestamp: Date.now(),
         heapUsed: memory.usedJSHeapSize / 1024 / 1024, // Convert to MB

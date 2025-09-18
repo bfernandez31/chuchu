@@ -79,16 +79,25 @@ export class DeltaCompression {
     };
 
     // Calculate player changes
-    delta.changedPlayers = this.calculatePlayerDeltas(previousState.players, currentState.players);
+    delta.changedPlayers = this.calculatePlayerDeltas(
+      Array.from(previousState.players.values()),
+      Array.from(currentState.players.values())
+    );
 
     // Calculate entity changes
-    delta.changedEntities = this.calculateEntityDeltas(previousState.entities, currentState.entities);
+    delta.changedEntities = this.calculateEntityDeltas(
+      Array.from(previousState.board.entities.values()),
+      Array.from(currentState.board.entities.values())
+    );
 
     // Calculate arrow changes
-    delta.newArrows = this.calculateArrowDeltas(previousState.arrows, currentState.arrows);
+    delta.newArrows = this.calculateArrowDeltas(previousState.board.arrows, currentState.board.arrows);
 
     // Find removed entities
-    delta.removedEntityIds = this.findRemovedEntities(previousState.entities, currentState.entities);
+    delta.removedEntityIds = this.findRemovedEntities(
+      Array.from(previousState.board.entities.values()),
+      Array.from(currentState.board.entities.values())
+    );
 
     // Determine if there are changes
     delta.hasChanges = delta.changedPlayers.length > 0 ||
@@ -293,7 +302,7 @@ export class DeltaCompression {
 
     // Add new arrows and removed entities
     fieldsChanged += delta.newArrows.length + delta.removedEntityIds.length;
-    totalFields += fullState.arrows.length + fullState.entities.length;
+    totalFields += fullState.board.arrows.length + fullState.board.entities.size;
 
     return {
       originalSize,

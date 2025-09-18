@@ -22,4 +22,17 @@ export type DataMsg = {
   type: 'arrow',
   direction: Direction,
   key: string
+} | {
+  type: 'predictive-input',
+  playerId: string,
+  input: any,
+  prediction: any
+} | {
+  type: 'performance-report',
+  playerId: string,
+  metrics: any
+} | {
+  type: 'request-state-sync',
+  playerId: string,
+  lastSequence: number
 };

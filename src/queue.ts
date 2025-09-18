@@ -5,12 +5,21 @@ import {WebSocket} from "ws";
 import * as fs from "fs";
 import {CONFIG} from "../browser/common/config";
 import {Bot} from "./bot";
-import { encodeServerMessage, ServerMessage } from './messages_pb';
+import { encodeServerMessage, ServerMessage, Long } from './messages_pb';
 
 /**
  * Enhanced WebSocket batcher with delta compression, adaptive batching, and priority-based message handling
  * Supports hybrid predictive rendering with delta compression and rollback correction distribution
  */
+
+// Helper function to convert number to Long
+function toLong(value: number): Long {
+  return {
+    low: value & 0xFFFFFFFF,
+    high: Math.floor(value / 0x100000000),
+    unsigned: false
+  };
+}
 class WebSocketBatcher {
   private pendingUpdates = new Set<string>();
   private priorityQueue: { message: any, priority: 'high' | 'medium' | 'low' }[] = [];
@@ -349,7 +358,7 @@ export class Queue {
   private handlePredictiveInput(payload: any, ws?: WebSocket) {
     const player = this.players.find((p) => p.key === payload.playerId);
     if (!player) {
-      this.sendError(ws, 'INVALID_PLAYER_ID', 'Player not found');
+      this.sendError('INVALID_PLAYER_ID', 'Player not found', ws);
       return;
     }
 
@@ -371,7 +380,8 @@ export class Queue {
     const player = this.players.find((p) => p.key === payload.playerId);
     if (player) {
       // Store performance metrics for monitoring
-      player.updatePerformanceMetrics?.(payload.metrics);
+      // TODO: Implement updatePerformanceMetrics method on Player class
+      // player.updatePerformanceMetrics?.(payload.metrics);
     }
   }
 
@@ -385,9 +395,7 @@ export class Queue {
     const msg: ServerMessage = {
       type: 'SYNC_',
       game: {
-        ...fullGameState,
-        sequence: payload.lastSequence + 1,
-        syncType: 'full'
+        ...fullGameState
       }
     };
 
@@ -398,7 +406,7 @@ export class Queue {
   /**
    * Send error message to client
    */
-  private sendError(ws?: WebSocket, errorCode: string, message: string) {
+  private sendError(errorCode: string, message: string, ws?: WebSocket) {
     if (!ws) return;
 
     const errorMessage = {
@@ -545,14 +553,12 @@ export class Queue {
 
       const msg: ServerMessage = {
         type: 'DELTA_',
-        delta: {
-          baseSequence: delta.baseSequence,
-          deltaSequence: delta.deltaSequence,
-          timestamp: Date.now(),
+        deltaGame: {
+          baseSequence: toLong(delta.baseSequence),
+          deltaSequence: toLong(delta.deltaSequence),
+          timestamp: toLong(Date.now()),
           changedPlayers: delta.changedPlayers,
           changedEntities: delta.changedEntities,
-          newArrows: delta.newArrows,
-          removedEntityIds: delta.removedEntityIds,
           compressionRatio
         }
       };

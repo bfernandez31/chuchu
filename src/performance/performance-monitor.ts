@@ -48,7 +48,7 @@ export interface AlertCallback {
 
 export class PerformanceMonitor {
   private config: MonitoringConfig;
-  private metrics: PerformanceMetrics;
+  private metrics: PerformanceMetricsImpl;
   private updateTimer: NodeJS.Timeout | null = null;
   private aggregationTimer: NodeJS.Timeout | null = null;
   private alertCallbacks: AlertCallback[] = [];

@@ -21,12 +21,25 @@ export class GameDisplay {
   cellSize: [number, number] = [0, 0];
   useAlt: boolean = false;
 
+  // Enhanced multi-layer rendering system
+  private layers: Map<string, HTMLCanvasElement> = new Map();
+  private layerContexts: Map<string, CanvasRenderingContext2D> = new Map();
+  private layerDirty: Map<string, boolean> = new Map();
+  private renderLayers = ['background', 'walls', 'entities', 'players', 'ui', 'predictive'];
+
   // Performance optimizations
   private gridCanvas!: HTMLCanvasElement;
   private gridContext!: CanvasRenderingContext2D;
   private gridCached: boolean = false;
   private lastUseAltUpdate: number = 0;
   private currentGridSize: [number, number] = [0, 0];
+
+  // 60 FPS performance optimization
+  private lastFrameTime = 0;
+  private frameCount = 0;
+  private fpsHistory: number[] = [];
+  private targetFPS = 60;
+  private frameTimeThreshold = 16.67; // 60 FPS = 16.67ms per frame
 
   constructor() {
     this.mouseImg = new Image();
@@ -82,17 +95,58 @@ export class GameDisplay {
     // Initialize grid cache canvas
     this.initGridCache();
 
+    // Initialize multi-layer rendering system
+    this.initLayers();
+
     this.ready = true;
+  }
+
+  /**
+   * Initialize multi-layer rendering system for performance optimization
+   */
+  private initLayers(): void {
+    this.renderLayers.forEach(layerName => {
+      const canvas = document.createElement('canvas');
+      canvas.width = CONFIG.GLOBAL_WIDTH;
+      canvas.height = CONFIG.GLOBAL_HEIGHT;
+      const context = canvas.getContext('2d')!;
+
+      this.layers.set(layerName, canvas);
+      this.layerContexts.set(layerName, context);
+      this.layerDirty.set(layerName, true);
+    });
+  }
+
+  /**
+   * Mark a specific layer as dirty for re-rendering
+   */
+  private markLayerDirty(layerName: string): void {
+    this.layerDirty.set(layerName, true);
+  }
+
+  /**
+   * Mark all layers as dirty
+   */
+  private markAllLayersDirty(): void {
+    this.renderLayers.forEach(layer => this.markLayerDirty(layer));
   }
 
   previousPayload = {state: {players: []}};
 
   display(newPayload: any) {
+    const frameStartTime = performance.now();
+
+    // Skip frame if we're exceeding target frame time
+    if (frameStartTime - this.lastFrameTime < this.frameTimeThreshold) {
+      return;
+    }
+
     const payload = {...this.previousPayload, ...newPayload, state: {...this.previousPayload.state, ...newPayload.state}};
 
     this.resize(payload.state.cols, payload.state.rows);
 
     if (this.ready) {
+      // Clear main canvas
       if (this.context) {
         this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
       }
@@ -100,19 +154,264 @@ export class GameDisplay {
       // Optimize useAlt calculation - only update every 500ms
       this.updateUseAlt();
 
-      // Draw cached grid instead of redrawing it
-      this.drawCachedGrid();
+      // Determine which layers need updating
+      this.determineLayerUpdates(payload);
 
-      if (!!payload.state && !!payload.state.strategy) {
-        this.drawStrategyName(payload.state);
-        this.drawWalls(payload.state);
-        this.drawMouses(payload.state);
-        this.drawCats(payload.state);
-        this.drawPlayers(payload.state);
-      }
+      // Render layers that need updating
+      this.renderLayers.forEach(layerName => {
+        if (this.layerDirty.get(layerName)) {
+          this.renderLayer(layerName, payload);
+          this.layerDirty.set(layerName, false);
+        }
+      });
+
+      // Composite all layers onto main canvas
+      this.compositeLayers();
+
+      // Track performance
+      this.trackFramePerformance(frameStartTime);
     }
 
     this.previousPayload = payload;
+  }
+
+  /**
+   * Determine which layers need updating based on payload changes
+   */
+  private determineLayerUpdates(payload: any): void {
+    // Always update entities and players layers for animation
+    this.markLayerDirty('entities');
+    this.markLayerDirty('players');
+
+    // Check for structural changes
+    if (!this.previousPayload.state ||
+        payload.state.cols !== this.previousPayload.state.cols ||
+        payload.state.rows !== this.previousPayload.state.rows) {
+      this.markAllLayersDirty();
+      return;
+    }
+
+    // Check for strategy changes (affects walls and background)
+    if (payload.state.strategy?.name !== this.previousPayload.state?.strategy?.name) {
+      this.markLayerDirty('background');
+      this.markLayerDirty('walls');
+      this.markLayerDirty('ui');
+    }
+
+    // Check for wall changes
+    if (JSON.stringify(payload.state.strategy?.walls) !== JSON.stringify(this.previousPayload.state?.strategy?.walls)) {
+      this.markLayerDirty('walls');
+    }
+  }
+
+  /**
+   * Render a specific layer
+   */
+  private renderLayer(layerName: string, payload: any): void {
+    const context = this.layerContexts.get(layerName);
+    if (!context) return;
+
+    // Clear layer
+    context.clearRect(0, 0, CONFIG.GLOBAL_WIDTH, CONFIG.GLOBAL_HEIGHT);
+
+    if (!payload.state || !payload.state.strategy) return;
+
+    switch (layerName) {
+      case 'background':
+        this.renderBackgroundLayer(context, payload.state);
+        break;
+      case 'walls':
+        this.renderWallsLayer(context, payload.state);
+        break;
+      case 'entities':
+        this.renderEntitiesLayer(context, payload.state);
+        break;
+      case 'players':
+        this.renderPlayersLayer(context, payload.state);
+        break;
+      case 'ui':
+        this.renderUILayer(context, payload.state);
+        break;
+      case 'predictive':
+        this.renderPredictiveLayer(context, payload.state);
+        break;
+    }
+  }
+
+  /**
+   * Composite all layers onto the main canvas
+   */
+  private compositeLayers(): void {
+    this.renderLayers.forEach(layerName => {
+      const canvas = this.layers.get(layerName);
+      if (canvas) {
+        this.context.drawImage(canvas, 0, 0);
+      }
+    });
+  }
+
+  /**
+   * Track frame performance and FPS
+   */
+  private trackFramePerformance(frameStartTime: number): void {
+    const frameEndTime = performance.now();
+    const frameTime = frameEndTime - frameStartTime;
+    const fps = 1000 / (frameEndTime - this.lastFrameTime);
+
+    this.fpsHistory.push(fps);
+    if (this.fpsHistory.length > 60) { // Keep last 60 samples
+      this.fpsHistory.shift();
+    }
+
+    this.lastFrameTime = frameEndTime;
+    this.frameCount++;
+
+    // Log performance warnings if FPS drops below target
+    if (fps < this.targetFPS * 0.8 && this.frameCount % 60 === 0) {
+      console.warn(`Low FPS detected: ${fps.toFixed(1)} FPS (frame time: ${frameTime.toFixed(2)}ms)`);
+    }
+  }
+
+  /**
+   * Render background layer (grid and strategy name)
+   */
+  private renderBackgroundLayer(context: CanvasRenderingContext2D, state: any): void {
+    // Draw grid
+    const originalContext = this.context;
+    this.context = context;
+    this.drawCachedGrid();
+    this.context = originalContext;
+  }
+
+  /**
+   * Render walls layer
+   */
+  private renderWallsLayer(context: CanvasRenderingContext2D, state: any): void {
+    state.strategy.walls.forEach((wall: any) => {
+      context.drawImage(this.wallImg, wall.position[0], wall.position[1], this.cellSize[0], this.cellSize[1]);
+    });
+  }
+
+  /**
+   * Render entities layer (mice and cats)
+   */
+  private renderEntitiesLayer(context: CanvasRenderingContext2D, state: any): void {
+    const originalContext = this.context;
+    this.context = context;
+
+    // Draw mice
+    const mouseImg = this.useAlt ? this.mouseImg2 : this.mouseImg;
+    (state.strategy.mouses ?? []).forEach((mouse: any) => {
+      this.drawRotated(mouseImg, mouse.position[0], mouse.position[1], this.angleFor(mouse.direction, 'mouse'));
+    });
+
+    // Draw cats
+    const catImg = this.useAlt ? this.catImg : this.catImg2;
+    (state.strategy.cats ?? []).forEach((cat: any) => {
+      this.drawRotated(catImg, cat.position[0], cat.position[1], this.angleFor(cat.direction, 'cat'));
+    });
+
+    this.context = originalContext;
+  }
+
+  /**
+   * Render players layer (goals, cursors, arrows)
+   */
+  private renderPlayersLayer(context: CanvasRenderingContext2D, state: any): void {
+    const originalContext = this.context;
+    this.context = context;
+
+    // Draw goals
+    state.strategy.goals.forEach((goal: any) => {
+      context.drawImage(this.goalImg[goal.color], goal.position[0], goal.position[1], this.cellSize[0], this.cellSize[1]);
+    });
+
+    // Draw players
+    state.players.forEach((player: any) => {
+      // Player position
+      context.fillStyle = "#FFFFFF";
+      context.beginPath();
+      context.arc(player.position[0], player.position[1], 3, 0, 2 * Math.PI, true);
+      context.fill();
+
+      // Player cursor
+      if (this.cursorImg[colors[player.colorIndex]] === undefined) {
+        console.warn(`Cursor image for color ${colors[player.colorIndex]} not found.`);
+        this.initImagesForColor(colors[player.colorIndex]);
+      }
+      context.drawImage(this.cursorImg[colors[player.colorIndex]], player.position[0], player.position[1], this.cellSize[0], this.cellSize[1]);
+
+      // Player arrows
+      (player.arrows || []).forEach((arrow: any) => {
+        this.drawRotated(this.arrowImg[colors[player.colorIndex]], arrow.position[0], arrow.position[1], this.angleFor(arrow.direction, 'arrow'));
+      });
+    });
+
+    this.context = originalContext;
+  }
+
+  /**
+   * Render UI layer (strategy name, debug info)
+   */
+  private renderUILayer(context: CanvasRenderingContext2D, state: any): void {
+    // Strategy name
+    context.fillStyle = "#a0ffff";
+    context.font = "50px Arial";
+    context.textAlign = "center";
+    context.fillText(state.strategy.name, CONFIG.GLOBAL_HEIGHT / 2, 100);
+
+    // FPS counter (if enabled)
+    if (this.fpsHistory.length > 0) {
+      const avgFPS = this.fpsHistory.reduce((sum, fps) => sum + fps, 0) / this.fpsHistory.length;
+      context.fillStyle = "#00ff00";
+      context.font = "20px Arial";
+      context.textAlign = "left";
+      context.fillText(`FPS: ${avgFPS.toFixed(1)}`, 10, 30);
+    }
+  }
+
+  /**
+   * Render predictive layer (client-side predictions)
+   */
+  private renderPredictiveLayer(context: CanvasRenderingContext2D, state: any): void {
+    // This layer will be used by the PredictiveRenderer
+    // For now, it's empty but ready for integration
+  }
+
+  /**
+   * Get current FPS statistics
+   */
+  public getPerformanceStats(): {
+    currentFPS: number;
+    averageFPS: number;
+    frameCount: number;
+    layerStats: Map<string, boolean>;
+  } {
+    const currentFPS = this.fpsHistory.length > 0 ? this.fpsHistory[this.fpsHistory.length - 1] : 0;
+    const averageFPS = this.fpsHistory.length > 0
+      ? this.fpsHistory.reduce((sum, fps) => sum + fps, 0) / this.fpsHistory.length
+      : 0;
+
+    return {
+      currentFPS,
+      averageFPS,
+      frameCount: this.frameCount,
+      layerStats: new Map(this.layerDirty)
+    };
+  }
+
+  /**
+   * Enable or disable predictive layer rendering
+   */
+  public setPredictiveLayerEnabled(enabled: boolean): void {
+    if (enabled) {
+      this.markLayerDirty('predictive');
+    } else {
+      const predictiveContext = this.layerContexts.get('predictive');
+      if (predictiveContext) {
+        predictiveContext.clearRect(0, 0, CONFIG.GLOBAL_WIDTH, CONFIG.GLOBAL_HEIGHT);
+      }
+    }
   }
 
   private drawMouses(state: any) {

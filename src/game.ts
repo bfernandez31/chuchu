@@ -18,10 +18,12 @@ export class Game {
   bots: Bot[] = [];
   private lastBotActionTime: number = 0;
   private lastPerformanceLog: number = 0;
+  private performanceMonitor: PerformanceMonitor;
 
   constructor(queue: Queue) {
     this.queue = queue;
     this.currentStrategy = new StartingStrategy();
+    this.performanceMonitor = new PerformanceMonitor();
 
     setTimeout(() => this.createBots(), 100);
   }
@@ -149,9 +151,9 @@ export class Game {
     });
 
     // Optimized collision detection using spatial partitioning
-    const collisionStartTime = PerformanceMonitor.startTiming('collision-detection');
+    const collisionStartTime = performance.now();
     const collisions = this.currentStrategy.findCollisions();
-    PerformanceMonitor.endTiming('collision-detection', collisionStartTime);
+    const collisionDuration = performance.now() - collisionStartTime;
 
     if (collisions.length > 0) {
       const mousesToRemove = collisions.map(([mouse, cat]) => mouse);
@@ -180,10 +182,12 @@ export class Game {
       const spatialStats = this.currentStrategy.getSpatialGridStats();
       console.log(`🗺️ Spatial Grid Stats - Objects: ${spatialStats.totalObjects}, Cells: ${spatialStats.occupiedCells}/${spatialStats.totalCells}, Avg/Cell: ${spatialStats.averageObjectsPerCell.toFixed(1)}`);
 
-      const perfStats = PerformanceMonitor.getStats('collision-detection');
-      if (perfStats) {
-        console.log(`⚡ Collision Detection - Avg: ${perfStats.average.toFixed(3)}ms, Min: ${perfStats.min.toFixed(3)}ms, Max: ${perfStats.max.toFixed(3)}ms`);
-      }
+      // Update server metrics with collision performance
+      this.performanceMonitor.updateServerMetrics({
+        timestamp: currentTime,
+        messagesSent: 0  // TODO: Implement message counting
+      });
+      console.log(`⚡ Collision Detection Duration: ${collisionDuration.toFixed(3)}ms`);
     }
   }
 
