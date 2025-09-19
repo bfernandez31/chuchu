@@ -5,6 +5,8 @@
  * state transitions, and performance metrics integration.
  */
 
+declare const Buffer: any;
+
 export enum GamePhase {
   WAITING = 'WAITING',
   ACTIVE = 'ACTIVE',
@@ -390,12 +392,28 @@ export class AuthoritativeGameStateImpl implements AuthoritativeGameState {
       timestamp: this.timestamp
     };
 
+    const payload = JSON.stringify(data);
+
     // Simple checksum - in production would use crypto hash
-    return btoa(JSON.stringify(data)).substr(0, 16);
+    return this.encodeChecksumPayload(payload).substr(0, 16);
   }
 
   private updateChecksum(): void {
     this.checksum = this.calculateChecksum();
+  }
+
+  private encodeChecksumPayload(payload: string): string {
+    const globalScope: any = typeof globalThis !== 'undefined' ? (globalThis as any) : undefined;
+
+    if (globalScope && typeof globalScope.btoa === 'function') {
+      return globalScope.btoa(payload);
+    }
+
+    if (typeof Buffer !== 'undefined') {
+      return Buffer.from(payload, 'utf8').toString('base64');
+    }
+
+    throw new Error('Base64 encoder not available in current environment');
   }
 }
 

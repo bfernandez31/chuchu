@@ -18,6 +18,12 @@ class OptimizedRenderer {
   private frameInterval: number = 1000 / this.targetFPS;
   private gameDisplay: GameDisplay;
   private pendingGameState: any = null;
+  private previousState: any = null;
+  private targetState: any = null;
+  private interpolatedState: any = null;
+  private transitionStartTime: number = 0;
+  private transitionDuration: number = 100;
+  private lastUpdateTimestamp: number = 0;
 
   constructor(gameDisplay: GameDisplay) {
     this.gameDisplay = gameDisplay;
@@ -27,10 +33,11 @@ class OptimizedRenderer {
   private startRenderLoop() {
     const renderFrame = (currentTime: number) => {
       if (currentTime - this.lastFrameTime >= this.frameInterval) {
-        if (this.needsRedraw && !this.isRendering && this.pendingGameState) {
+        if (!this.isRendering && this.pendingGameState) {
           this.isRendering = true;
-          this.gameDisplay.display(this.pendingGameState);
-          this.needsRedraw = false;
+          const renderState = this.computeInterpolatedState(currentTime);
+          const payload = { ...this.pendingGameState, state: renderState ?? this.pendingGameState.state };
+          this.gameDisplay.display(payload);
           this.isRendering = false;
           this.lastFrameTime = currentTime;
         }
@@ -43,6 +50,30 @@ class OptimizedRenderer {
 
   // Appelé par les WebSocket messages
   markForRedraw(gameState: any) {
+    const now = performance.now();
+
+    if (this.interpolatedState) {
+      this.previousState = this.cloneState(this.interpolatedState);
+    } else if (this.targetState) {
+      this.previousState = this.cloneState(this.targetState);
+    } else if (this.pendingGameState?.state) {
+      this.previousState = this.cloneState(this.pendingGameState.state);
+    } else {
+      this.previousState = this.cloneState(gameState.state);
+    }
+
+    this.targetState = this.cloneState(gameState.state);
+    this.transitionStartTime = now;
+
+    if (this.lastUpdateTimestamp === 0) {
+      this.transitionDuration = this.frameInterval;
+    } else {
+      const delta = now - this.lastUpdateTimestamp;
+      this.transitionDuration = this.clamp(delta, 16, 160);
+    }
+
+    this.lastUpdateTimestamp = now;
+
     this.pendingGameState = gameState;
     this.needsRedraw = true;
   }
@@ -70,6 +101,120 @@ class OptimizedRenderer {
     }
 
     this.setTargetFPS(adaptedFPS);
+  }
+
+  private computeInterpolatedState(currentTime: number): any {
+    if (!this.targetState) {
+      if (this.pendingGameState?.state) {
+        this.interpolatedState = this.cloneState(this.pendingGameState.state);
+        return this.interpolatedState;
+      }
+      return null;
+    }
+
+    const duration = this.transitionDuration || this.frameInterval;
+    const elapsed = currentTime - this.transitionStartTime;
+    const progress = duration > 0 ? Math.min(1, Math.max(0, elapsed / duration)) : 1;
+
+    if (!this.previousState) {
+      this.previousState = this.cloneState(this.targetState);
+    }
+
+    this.interpolatedState = this.interpolateState(this.previousState, this.targetState, progress);
+
+    if (progress >= 1) {
+      this.previousState = this.cloneState(this.targetState);
+      this.targetState = null;
+      this.needsRedraw = false;
+    }
+
+    return this.interpolatedState;
+  }
+
+  private interpolateState(fromState: any, toState: any, progress: number): any {
+    if (!fromState || !toState) {
+      return this.cloneState(toState ?? fromState);
+    }
+
+    const eased = this.smoothStep(progress);
+    const result = this.cloneState(toState);
+
+    if (Array.isArray(fromState.players) && Array.isArray(toState.players)) {
+      result.players = this.interpolateEntityArray(fromState.players, toState.players, eased, true);
+    }
+
+    if (fromState.strategy && toState.strategy) {
+      if (Array.isArray(fromState.strategy.mouses) && Array.isArray(toState.strategy.mouses)) {
+        result.strategy.mouses = this.interpolateEntityArray(fromState.strategy.mouses, toState.strategy.mouses, eased);
+      }
+
+      if (Array.isArray(fromState.strategy.cats) && Array.isArray(toState.strategy.cats)) {
+        result.strategy.cats = this.interpolateEntityArray(fromState.strategy.cats, toState.strategy.cats, eased);
+      }
+    }
+
+    return result;
+  }
+
+  private interpolateEntityArray(fromList: any[], toList: any[], progress: number, includeNested = false): any[] {
+    return toList.map((toEntity, index) => {
+      const fromEntity = this.findMatchingEntity(fromList, toEntity, index);
+
+      if (!fromEntity) {
+        return JSON.parse(JSON.stringify(toEntity));
+      }
+
+      const interpolated = { ...toEntity };
+
+      if (Array.isArray(fromEntity.position) && Array.isArray(toEntity.position)) {
+        interpolated.position = this.interpolatePoint(fromEntity.position, toEntity.position, progress);
+      }
+
+      if (includeNested && Array.isArray(fromEntity.arrows) && Array.isArray(toEntity.arrows)) {
+        interpolated.arrows = this.interpolateEntityArray(fromEntity.arrows, toEntity.arrows, progress);
+      }
+
+      return interpolated;
+    });
+  }
+
+  private findMatchingEntity(fromList: any[], targetEntity: any, fallbackIndex: number): any {
+    if (targetEntity && typeof targetEntity.id !== 'undefined') {
+      const match = fromList.find(item => item && item.id === targetEntity.id);
+      if (match) {
+        return match;
+      }
+    }
+
+    return fromList[fallbackIndex] ?? null;
+  }
+
+  private interpolatePoint(from: number[], to: number[], progress: number): number[] {
+    return [
+      from[0] + (to[0] - from[0]) * progress,
+      from[1] + (to[1] - from[1]) * progress
+    ];
+  }
+
+  private cloneState<T>(state: T): T {
+    if (state === null || state === undefined) {
+      return state;
+    }
+
+    const globalClone = (globalThis as any)?.structuredClone;
+    if (typeof globalClone === 'function') {
+      return globalClone(state);
+    }
+
+    return JSON.parse(JSON.stringify(state));
+  }
+
+  private smoothStep(t: number): number {
+    return t * t * (3 - 2 * t);
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
   }
 }
 

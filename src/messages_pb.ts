@@ -94,6 +94,7 @@ export interface PlayerState {
   position?: number[];
   totalPoints?: number;
   arrows?: ArrowState[];
+  id?: string;
 }
 
 export function encodePlayerState(message: PlayerState): Uint8Array {
@@ -148,6 +149,13 @@ function _encodePlayerState(message: PlayerState, bb: ByteBuffer): void {
       writeByteBuffer(bb, nested);
       pushByteBuffer(nested);
     }
+  }
+
+  // optional string id = 6;
+  let $id = message.id;
+  if ($id !== undefined) {
+    writeVarint32(bb, 50);
+    writeString(bb, $id);
   }
 }
 
@@ -204,6 +212,12 @@ function _decodePlayerState(bb: ByteBuffer): PlayerState {
         let values = message.arrows || (message.arrows = []);
         values.push(_decodeArrowState(bb));
         bb.limit = limit;
+        break;
+      }
+
+      // optional string id = 6;
+      case 6: {
+        message.id = readString(bb, readVarint32(bb));
         break;
       }
 

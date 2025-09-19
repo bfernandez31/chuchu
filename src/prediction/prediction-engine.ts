@@ -5,7 +5,7 @@
  * velocity prediction, confidence scoring, and input buffer integration.
  */
 
-import { AuthoritativeGameState, Entity, Player, Position } from '../models/authoritative-game-state';
+import { AuthoritativeGameState, Entity, Player, Position, Velocity } from '../models/authoritative-game-state';
 import { PredictiveGameState, PredictionType, ClientMetrics } from '../models/predictive-game-state';
 import { PlayerInput, InputType } from '../models/player-input';
 
@@ -44,7 +44,8 @@ export interface VelocityPrediction {
 export class PredictionEngine {
   private config: PredictionConfig;
   private predictionHistory: Map<string, PredictionResult[]> = new Map();
-  private velocityHistory: Map<string, Position[]> = new Map();
+  private velocityHistory: Map<string, Velocity[]> = new Map();
+  private lastAuthoritativeState: AuthoritativeGameState | null = null;
   private readonly maxHistorySize = 50;
   private readonly maxPredictionDistance = 10.0; // Max pixels to predict ahead
 
@@ -307,11 +308,41 @@ export class PredictionEngine {
 
       if (filteredHistory.length === 0) {
         this.predictionHistory.delete(playerId);
-        this.velocityHistory.delete(playerId);
       } else {
         this.predictionHistory.set(playerId, filteredHistory);
       }
     }
+  }
+
+  /**
+   * Update engine with latest authoritative snapshot
+   */
+  public updateAuthoritativeState(state: AuthoritativeGameState): void {
+    if (this.lastAuthoritativeState && state.sequence <= this.lastAuthoritativeState.sequence) {
+      return;
+    }
+
+    this.lastAuthoritativeState = state;
+
+    const activeEntityIds = new Set<string>();
+
+    for (const [entityId, entity] of Array.from(state.board.entities)) {
+      activeEntityIds.add(entityId);
+
+      if (entity.velocity) {
+        this.recordVelocitySample(entityId, entity.velocity);
+      }
+    }
+
+    // Prune velocity history for entities no longer present
+    for (const entityId of Array.from(this.velocityHistory.keys())) {
+      if (!activeEntityIds.has(entityId)) {
+        this.velocityHistory.delete(entityId);
+      }
+    }
+
+    // Remove stale prediction history entries
+    this.cleanup();
   }
 
   // Private prediction methods
@@ -584,6 +615,21 @@ export class PredictionEngine {
 
   private generateEntityId(): string {
     return `entity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private recordVelocitySample(entityId: string, velocity: Velocity): void {
+    let history = this.velocityHistory.get(entityId);
+
+    if (!history) {
+      history = [];
+      this.velocityHistory.set(entityId, history);
+    }
+
+    history.push({ ...velocity });
+
+    if (history.length > this.maxHistorySize) {
+      history.shift();
+    }
   }
 }
 

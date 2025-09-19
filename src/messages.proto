@@ -16,6 +16,7 @@ message PlayerState {
   repeated int32 position = 3; // [x, y]
   int32 totalPoints = 4;
   repeated ArrowState arrows = 5;
+  string id = 6;
 }
 
 // Message pour l'état d'une souris

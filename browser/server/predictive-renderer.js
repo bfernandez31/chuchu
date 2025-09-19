@@ -19,6 +19,8 @@ var __assign = (this && this.__assign) || function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PredictiveRenderer = void 0;
 var prediction_engine_1 = require("../../src/prediction/prediction-engine");
+var interpolation_service_1 = require("../../src/prediction/interpolation-service");
+var player_input_1 = require("../../src/models/player-input");
 var rollback_manager_1 = require("../../src/prediction/rollback-manager");
 var PredictiveRenderer = /** @class */ (function () {
     function PredictiveRenderer(gameDisplay) {
@@ -35,7 +37,14 @@ var PredictiveRenderer = /** @class */ (function () {
         this.rollbackCorrectionCount = 0;
         this.gameDisplay = gameDisplay;
         this.predictionEngine = new prediction_engine_1.PredictionEngine();
-        this.rollbackManager = new rollback_manager_1.RollbackManager();
+        this.interpolationService = new interpolation_service_1.InterpolationService();
+        this.inputBuffer = new player_input_1.InputBuffer();
+        if (rollback_manager_1.RollbackManagerFactory && typeof rollback_manager_1.RollbackManagerFactory.create === 'function') {
+            this.rollbackManager = rollback_manager_1.RollbackManagerFactory.create(this.predictionEngine, this.interpolationService, this.inputBuffer);
+        }
+        else {
+            this.rollbackManager = new rollback_manager_1.RollbackManager(this.predictionEngine, this.interpolationService, this.inputBuffer);
+        }
         this.renderingState = {
             authoritative: null,
             predicted: null,

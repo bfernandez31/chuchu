@@ -111,6 +111,7 @@ export class Player {
 
   state() {
     return {
+      id: this.key,
       colorIndex: colors.indexOf(this.color),
       name: this.name,
       position: this.position,
