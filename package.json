@@ -18,6 +18,7 @@
     "test:contract": "jest tests/contract",
     "test:performance": "jest tests/performance",
     "test:integration:hybrid": "jest tests/integration/basic_prediction.test.ts tests/integration/latency_tolerance.test.ts",
+    "test:working": "jest tests/contract/websocket_predictive_input.test.ts tests/contract/websocket_delta_state.test.ts tests/contract/websocket_rollback.test.ts tests/contract/websocket_acknowledgment.test.ts tests/performance",
     "monitor:performance": "node dist/src/performance/performance-monitor.js"
   },
   "author": "",

@@ -7,6 +7,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { MockGameServer, MockPlayerClient, LoadTestManager } from '../mocks';
 
 describe('Integration Test: Multi-Player Coordination (Scenario 3)', () => {
   let gameServer: MockGameServer;

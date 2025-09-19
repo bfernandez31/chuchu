@@ -7,6 +7,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { MockGameServer, MockPlayerClient, ConnectionManager, StateRecoveryMonitor } from '../mocks';
 
 describe('Integration Test: System Recovery and Resilience (Scenario 6)', () => {
   let gameServer: MockGameServer;
@@ -254,7 +255,7 @@ describe('Integration Test: System Recovery and Resilience (Scenario 6)', () => 
 
       // Final state should reflect server authority
       const finalState = playerClient.getFullGameState();
-      const conflictedArrow = finalState.arrows.find(arrow =>
+      const conflictedArrow = finalState.arrows.find((arrow: any) =>
         arrow.position.x === 10 && arrow.position.y === 10
       );
       expect(conflictedArrow.direction).toBe('DOWN'); // Server wins

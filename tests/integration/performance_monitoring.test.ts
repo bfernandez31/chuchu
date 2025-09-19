@@ -7,6 +7,7 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { MockGameServer, MockPlayerClient, PerformanceAPIClient, MetricsCollector } from '../mocks';
 
 describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
   let gameServer: MockGameServer;

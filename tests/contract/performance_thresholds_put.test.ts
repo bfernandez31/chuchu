@@ -6,13 +6,26 @@
  */
 
 import { describe, test, expect, beforeEach, jest } from '@jest/globals';
+import {
+  ThresholdsAPIClient,
+  validatePerformanceThresholds,
+  createValidPerformanceThresholds,
+  ThresholdValidator,
+  ThresholdRangeValidator,
+  RequestValidator,
+  RealisticThresholdValidator,
+  ThresholdImpactAnalyzer,
+  ThresholdChangeAnalyzer,
+  ThresholdPresetManager,
+  EnvironmentThresholdValidator
+} from '../mocks';
 
 describe('Performance API Contract: PUT /api/v1/performance/thresholds', () => {
-  let mockFetch: jest.Mock;
+  let mockFetch: jest.MockedFunction<typeof fetch>;
 
   beforeEach(() => {
-    mockFetch = jest.fn();
-    global.fetch = mockFetch;
+    mockFetch = jest.fn() as jest.MockedFunction<typeof fetch>;
+    (global as any).fetch = mockFetch;
   });
 
   describe('Request Schema Validation', () => {
@@ -200,8 +213,8 @@ describe('Performance API Contract: PUT /api/v1/performance/thresholds', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: jest.fn().mockResolvedValueOnce(responseThresholds)
-      });
+        json: () => Promise.resolve(responseThresholds)
+      } as Response);
 
       const apiClient = new ThresholdsAPIClient();
       const response = await apiClient.updateThresholds(requestThresholds);
@@ -234,8 +247,8 @@ describe('Performance API Contract: PUT /api/v1/performance/thresholds', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 400,
-        json: jest.fn().mockResolvedValueOnce(badRequestResponse)
-      });
+        json: () => Promise.resolve(badRequestResponse)
+      } as Response);
 
       const apiClient = new ThresholdsAPIClient();
 
@@ -386,216 +399,3 @@ describe('Performance API Contract: PUT /api/v1/performance/thresholds', () => {
     });
   });
 });
-
-// Helper functions and classes
-function validatePerformanceThresholds(thresholds: any): void {
-  const required = ['frameRate', 'latency', 'rollbackRate', 'cpuUsage'];
-  for (const field of required) {
-    if (!thresholds || !thresholds.hasOwnProperty(field)) {
-      throw new Error(`Missing required threshold field: ${field}`);
-    }
-  }
-
-  for (const [key, threshold] of Object.entries(thresholds)) {
-    if (required.includes(key)) {
-      const t = threshold as any;
-      if (!t.hasOwnProperty('warning') || !t.hasOwnProperty('critical')) {
-        throw new Error(`Invalid threshold structure for ${key}`);
-      }
-      if (typeof t.warning !== 'number' || typeof t.critical !== 'number') {
-        throw new Error(`Invalid threshold values for ${key}`);
-      }
-    }
-  }
-}
-
-class ThresholdValidator {
-  validateFrameRateThresholds(warning: number, critical: number): boolean {
-    return warning > critical; // Higher frame rate is better
-  }
-
-  validateLatencyThresholds(warning: number, critical: number): boolean {
-    return warning < critical; // Lower latency is better
-  }
-
-  validateRollbackThresholds(warning: number, critical: number): boolean {
-    return warning < critical; // Lower rollback rate is better
-  }
-
-  validateCpuThresholds(warning: number, critical: number): boolean {
-    return warning < critical; // Lower CPU usage is better
-  }
-
-  validateAllThresholds(thresholds: any): boolean {
-    return this.validateFrameRateThresholds(thresholds.frameRate.warning, thresholds.frameRate.critical) &&
-           this.validateLatencyThresholds(thresholds.latency.warning, thresholds.latency.critical) &&
-           this.validateRollbackThresholds(thresholds.rollbackRate.warning, thresholds.rollbackRate.critical) &&
-           this.validateCpuThresholds(thresholds.cpuUsage.warning, thresholds.cpuUsage.critical);
-  }
-}
-
-class ThresholdRangeValidator {
-  isValidFrameRate(value: number): boolean {
-    return value >= 1 && value <= 120;
-  }
-
-  isValidLatency(value: number): boolean {
-    return value >= 0 && value <= 5000;
-  }
-
-  isValidRollbackRate(value: number): boolean {
-    return value >= 0 && value <= 100;
-  }
-
-  isValidCpuUsage(value: number): boolean {
-    return value >= 0 && value <= 100;
-  }
-}
-
-class RequestValidator {
-  isValidContentType(contentType: string): boolean {
-    return contentType === 'application/json';
-  }
-}
-
-class RealisticThresholdValidator {
-  validateConfiguration(thresholds: any): boolean {
-    // Check if thresholds are reasonable for a game
-    if (thresholds.frameRate.warning < 20 || thresholds.frameRate.warning > 55) return false;
-    if (thresholds.latency.critical > 1000 || thresholds.latency.warning < 50) return false;
-    if (thresholds.rollbackRate.critical > 50 || thresholds.rollbackRate.warning < 1) return false;
-    if (thresholds.cpuUsage.critical > 95 || thresholds.cpuUsage.warning < 50) return false;
-
-    return true;
-  }
-}
-
-class ThresholdImpactAnalyzer {
-  analyzeImpact(thresholds: any): {
-    alertFrequency: string;
-    falsePositiveRisk: string;
-    performanceOverhead: string;
-  } {
-    let alertFrequency = 'low';
-    let falsePositiveRisk = 'low';
-
-    // Analyze strictness
-    if (thresholds.frameRate.warning > 50 || thresholds.latency.warning < 150) {
-      alertFrequency = 'high';
-      falsePositiveRisk = 'medium';
-    }
-
-    return {
-      alertFrequency,
-      falsePositiveRisk,
-      performanceOverhead: 'low' // Monitoring overhead is generally low
-    };
-  }
-}
-
-class ThresholdChangeAnalyzer {
-  analyzeChange(current: any, proposed: any): {
-    frameRateChange: string;
-    latencyChange: string;
-    overallImpact: string;
-  } {
-    const frameRateChange = proposed.frameRate.warning > current.frameRate.warning ? 'stricter' : 'more_lenient';
-    const latencyChange = proposed.latency.warning < current.latency.warning ? 'stricter' : 'more_lenient';
-
-    let overallImpact = 'neutral';
-    if (frameRateChange !== latencyChange) {
-      overallImpact = 'mixed';
-    } else if (frameRateChange === 'stricter') {
-      overallImpact = 'stricter';
-    } else {
-      overallImpact = 'more_lenient';
-    }
-
-    return { frameRateChange, latencyChange, overallImpact };
-  }
-}
-
-class ThresholdPresetManager {
-  getPreset(presetName: string): any {
-    const presets = {
-      strict: {
-        frameRate: { warning: 55, critical: 45 },
-        latency: { warning: 100, critical: 200 },
-        rollbackRate: { warning: 2, critical: 5 },
-        cpuUsage: { warning: 60, critical: 80 }
-      },
-      balanced: {
-        frameRate: { warning: 45, critical: 30 },
-        latency: { warning: 200, critical: 500 },
-        rollbackRate: { warning: 5, critical: 10 },
-        cpuUsage: { warning: 70, critical: 90 }
-      },
-      lenient: {
-        frameRate: { warning: 30, critical: 20 },
-        latency: { warning: 300, critical: 600 },
-        rollbackRate: { warning: 10, critical: 20 },
-        cpuUsage: { warning: 80, critical: 95 }
-      }
-    };
-
-    return presets[presetName as keyof typeof presets] || presets.balanced;
-  }
-}
-
-class EnvironmentThresholdValidator {
-  isValidForEnvironment(thresholds: any, environment: string): boolean {
-    if (environment === 'production') {
-      // Production should have stricter thresholds
-      return thresholds.frameRate.warning >= 50 && thresholds.latency.warning <= 150;
-    }
-    return true; // Development/staging can be more lenient
-  }
-}
-
-class ThresholdsAPIClient {
-  private baseUrl = 'http://localhost:3000/api/v1';
-
-  async updateThresholds(thresholds: any): Promise<{ status: number; data: any }> {
-    const response = await fetch(`${this.baseUrl}/performance/thresholds`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(thresholds)
-    });
-
-    if (response.status === 400) {
-      throw new Error('Invalid threshold values');
-    }
-
-    if (!response.ok) {
-      throw new Error('API request failed');
-    }
-
-    return {
-      status: response.status,
-      data: await response.json()
-    };
-  }
-}
-
-function createValidPerformanceThresholds() {
-  return {
-    frameRate: {
-      warning: 45,
-      critical: 30
-    },
-    latency: {
-      warning: 200,
-      critical: 500
-    },
-    rollbackRate: {
-      warning: 5,
-      critical: 10
-    },
-    cpuUsage: {
-      warning: 70,
-      critical: 90
-    }
-  };
-}
