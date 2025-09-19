@@ -86,6 +86,9 @@ let predictiveRenderer: PredictiveRenderer | null = null;
 let hybridModeEnabled = false;
 const hybridDebug = new HybridDebugDisplay();
 
+// Temporary: Allow disabling hybrid mode for debugging
+const FORCE_LEGACY_MODE = false; // Set to true to force legacy rendering
+
 let ws: WebSocket;
 let lastGameState: any = null;
 
@@ -102,7 +105,7 @@ fetch('/config.json').then(config => {
         qrcode.init();
 
         // Initialize Predictive Renderer when connection opens
-        if (!predictiveRenderer) {
+        if (!predictiveRenderer && !FORCE_LEGACY_MODE) {
           predictiveRenderer = new PredictiveRenderer(game, {
             debugMode: true, // Enable debug mode to see what's happening
             performanceMonitoring: true
@@ -175,12 +178,19 @@ fetch('/config.json').then(config => {
 
               if (hybridModeEnabled && predictiveRenderer) {
                 // Route to Predictive Renderer (Phase 1)
-                if (isAuthoritativeState) {
-                  predictiveRenderer.onServerState(lastGameState, timestamp);
-                } else {
-                  // Since we don't have metadata yet, treat all states as server states for now
-                  // This will be improved when we implement proper metadata transmission
-                  predictiveRenderer.onServerState(lastGameState, timestamp);
+                try {
+                  if (isAuthoritativeState) {
+                    predictiveRenderer.onServerState(lastGameState, timestamp);
+                  } else {
+                    // Since we don't have metadata yet, treat all states as server states for now
+                    // This will be improved when we implement proper metadata transmission
+                    predictiveRenderer.onServerState(lastGameState, timestamp);
+                  }
+                } catch (error) {
+                  console.error('❌ PredictiveRenderer error, falling back to legacy:', error);
+                  // Fallback to legacy renderer if predictive renderer fails
+                  optimizedRenderer.adaptFPSBasedOnGameState(gameState);
+                  optimizedRenderer.markForRedraw(gameState);
                 }
               } else {
                 // Fallback to legacy renderer
