@@ -7,7 +7,24 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { MockGameServer, MockPlayerClient, ConnectionManager, StateRecoveryMonitor } from '../mocks';
+import {
+  MockGameServer,
+  MockPlayerClient,
+  ConnectionManager,
+  StateRecoveryMonitor,
+  DisconnectionMonitor,
+  RecoveryTest,
+  NetworkInstabilitySimulator,
+  ReconnectionTracker,
+  ExponentialBackoffTracker,
+  SessionContinuityTracker,
+  StateSynchronizationTracker,
+  StateConflictResolver,
+  DataIntegrityValidator,
+  MultiClientResilienceTest,
+  ServerRestartTest,
+  SystemResilienceValidator
+} from '../mocks';
 
 describe('Integration Test: System Recovery and Resilience (Scenario 6)', () => {
   let gameServer: MockGameServer;

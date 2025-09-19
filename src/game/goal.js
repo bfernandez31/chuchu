@@ -1,1 +1,0 @@
-//# sourceMappingURL=goal.js.map

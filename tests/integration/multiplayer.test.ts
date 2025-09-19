@@ -94,7 +94,7 @@ describe('Integration Test: Multi-Player Coordination (Scenario 3)', () => {
       }
 
       // ✅ All clients maintain target frame rate
-      performanceStats.clients.forEach(clientStats => {
+      performanceStats.clients.forEach((clientStats: any) => {
         expect(clientStats.frameRate).toBeGreaterThanOrEqual(58);
       });
 
@@ -290,7 +290,7 @@ describe('Integration Test: Multi-Player Coordination (Scenario 3)', () => {
       expect(accuracyResults.overallAccuracy).toBeGreaterThan(90);
 
       // Each client should maintain high accuracy
-      accuracyResults.clientAccuracies.forEach(accuracy => {
+      accuracyResults.clientAccuracies.forEach((accuracy: any) => {
         expect(accuracy).toBeGreaterThan(85);
       });
 
