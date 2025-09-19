@@ -11,7 +11,12 @@ export class HybridDebugDisplay {
   private updateInterval: number = 1000; // Update every second
 
   constructor() {
-    this.createDebugElement();
+    // Delay element creation until DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => this.createDebugElement());
+    } else {
+      this.createDebugElement();
+    }
   }
 
   private createDebugElement(): void {
@@ -128,6 +133,18 @@ export class HybridDebugDisplay {
    * Show system status messages
    */
   showStatus(message: string, type: 'info' | 'warning' | 'error' | 'success' = 'info'): void {
+    // Wait for DOM if not ready
+    if (!document.body) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => this.showStatus(message, type));
+        return;
+      } else {
+        // DOM should be ready but body not found, log error
+        console.warn('Cannot show status message: document.body not found');
+        return;
+      }
+    }
+
     const colors = {
       info: '#00bfff',
       warning: '#ff6600',
@@ -213,6 +230,17 @@ export class HybridDebugDisplay {
    */
   updatePerformanceWarnings(warnings: string[]): void {
     if (warnings.length === 0) return;
+
+    // Wait for DOM if not ready
+    if (!document.body) {
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => this.updatePerformanceWarnings(warnings));
+        return;
+      } else {
+        console.warn('Cannot show performance warnings: document.body not found');
+        return;
+      }
+    }
 
     const warningContainer = document.querySelector('.debug-performance-warnings') ||
                            (() => {
