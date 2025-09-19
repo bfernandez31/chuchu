@@ -40,7 +40,7 @@ export class PredictiveRenderer {
     this.stateManager = new GameStateManager();
     this.config = {
       targetFPS: 60,
-      renderDelay: 100, // 100ms delay for smoother interpolation
+      renderDelay: 150, // 150ms delay for smoother interpolation and less jumping
       debugMode: false,
       performanceMonitoring: true,
       ...config

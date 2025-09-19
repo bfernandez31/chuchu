@@ -212,8 +212,20 @@ export class GameStateManager {
     factor: number
   ): PlayerState[] {
     return playersB.map((playerB, index) => {
-      const playerA = playersA[index];
+      // Find matching player by name or use same index
+      const playerA = playersA.find(p => p.name === playerB.name) || playersA[index];
       if (!playerA || !playerA.position || !playerB.position) {
+        return playerB;
+      }
+
+      // Check for teleportation (distance > 100 units)
+      const distance = Math.sqrt(
+        Math.pow(playerB.position[0] - playerA.position[0], 2) +
+        Math.pow(playerB.position[1] - playerA.position[1], 2)
+      );
+
+      // If player teleported, don't interpolate
+      if (distance > 100) {
         return playerB;
       }
 
@@ -235,9 +247,23 @@ export class GameStateManager {
     objectsB: any[],
     factor: number
   ): any[] {
-    return objectsB.map((objB, index) => {
-      const objA = objectsA[index];
+    return objectsB.map((objB) => {
+      // Find matching object in state A by ID/key if available
+      const objA = this.findMatchingObject(objectsA, objB);
+
+      // If no matching object or missing position data, use state B as-is
       if (!objA || !objA.position || !objB.position) {
+        return objB;
+      }
+
+      // Check if objects are too far apart (indicating teleportation/respawn)
+      const distance = Math.sqrt(
+        Math.pow(objB.position[0] - objA.position[0], 2) +
+        Math.pow(objB.position[1] - objA.position[1], 2)
+      );
+
+      // If objects are too far apart (>200 units), don't interpolate
+      if (distance > 200) {
         return objB;
       }
 
@@ -249,6 +275,32 @@ export class GameStateManager {
         ]
       };
     });
+  }
+
+  /**
+   * Find matching object between states
+   */
+  private findMatchingObject(objects: any[], targetObj: any): any | null {
+    // First try to match by ID if available
+    if (targetObj.id !== undefined) {
+      const match = objects.find(obj => obj.id === targetObj.id);
+      if (match) return match;
+    }
+
+    // Fallback: match by position proximity (within 50 units)
+    if (targetObj.position) {
+      const match = objects.find(obj => {
+        if (!obj.position) return false;
+        const distance = Math.sqrt(
+          Math.pow(obj.position[0] - targetObj.position[0], 2) +
+          Math.pow(obj.position[1] - targetObj.position[1], 2)
+        );
+        return distance < 50;
+      });
+      if (match) return match;
+    }
+
+    return null;
   }
 
   /**

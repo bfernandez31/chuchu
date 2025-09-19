@@ -85,6 +85,7 @@ const optimizedRenderer = new OptimizedRenderer(game);
 let predictiveRenderer: PredictiveRenderer | null = null;
 let hybridModeEnabled = false;
 const hybridDebug = new HybridDebugDisplay();
+let systemStartTime = Date.now(); // Store system start time
 
 // Temporary: Allow disabling hybrid mode for debugging
 const FORCE_LEGACY_MODE = false; // Set to true to force legacy rendering
@@ -131,7 +132,7 @@ fetch('/config.json').then(config => {
                 system: {
                   enabled: true,
                   mode: 'HYBRID',
-                  uptime: Date.now() - performance.now()
+                  uptime: Date.now() - systemStartTime
                 }
               });
             }
