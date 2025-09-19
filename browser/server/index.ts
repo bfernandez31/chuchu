@@ -104,7 +104,7 @@ fetch('/config.json').then(config => {
         // Initialize Predictive Renderer when connection opens
         if (!predictiveRenderer) {
           predictiveRenderer = new PredictiveRenderer(game, {
-            debugMode: CONFIG.DEBUG_MODE || false,
+            debugMode: true, // Enable debug mode to see what's happening
             performanceMonitoring: true
           });
           predictiveRenderer.start();
@@ -178,8 +178,9 @@ fetch('/config.json').then(config => {
                 if (isAuthoritativeState) {
                   predictiveRenderer.onServerState(lastGameState, timestamp);
                 } else {
-                  // Handle as prediction or interpolated state
-                  predictiveRenderer.addPrediction(lastGameState, timestamp);
+                  // Since we don't have metadata yet, treat all states as server states for now
+                  // This will be improved when we implement proper metadata transmission
+                  predictiveRenderer.onServerState(lastGameState, timestamp);
                 }
               } else {
                 // Fallback to legacy renderer

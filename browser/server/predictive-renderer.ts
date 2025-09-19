@@ -82,7 +82,7 @@ export class PredictiveRenderer {
     this.stateManager.addServerState(state, timestamp);
 
     if (this.config.debugMode) {
-      console.log(`📡 Server state received (timestamp: ${timestamp})`);
+      console.log(`📡 Server state received (timestamp: ${timestamp}) - Players: ${state.players?.length || 0}, Started: ${state.started}`);
     }
   }
 
@@ -133,6 +133,26 @@ export class PredictiveRenderer {
             predictive: true
           }
         });
+      } else {
+        // Debug: Why no state to render?
+        if (this.config.debugMode) {
+          const stateStats = this.stateManager.getStats();
+          console.warn(`⚠️ No interpolated state available - Server states: ${stateStats.serverStates}, Latest: ${stateStats.latestServerState ? new Date(stateStats.latestServerState).toLocaleTimeString() : 'none'}`);
+        }
+
+        // Fallback: Try to render the latest available server state directly
+        const latestState = this.stateManager.getLatestServerState();
+        if (latestState) {
+          this.gameDisplay.display({
+            state: latestState.state,
+            _meta: {
+              renderTime: currentTime,
+              interpolated: false,
+              predictive: true,
+              fallback: true
+            }
+          });
+        }
       }
 
       // Performance monitoring
