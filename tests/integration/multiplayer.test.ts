@@ -7,7 +7,21 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { MockGameServer, MockPlayerClient, LoadTestManager } from '../mocks';
+import {
+  MockGameServer,
+  MockPlayerClient,
+  LoadTestManager,
+  PerformanceMonitor,
+  NetworkBandwidthMonitor,
+  ServerPerformanceMonitor,
+  BurstTrafficMonitor,
+  PredictionAccuracyTracker,
+  ComplexInteractionScenario,
+  CoordinationMonitor,
+  DisconnectionTestManager,
+  MultiPlayerScenarioValidator,
+  analyzeScalingCharacteristics
+} from '../mocks';
 
 describe('Integration Test: Multi-Player Coordination (Scenario 3)', () => {
   let gameServer: MockGameServer;
@@ -380,139 +394,3 @@ describe('Integration Test: Multi-Player Coordination (Scenario 3)', () => {
 });
 
 // Helper classes for multi-player testing
-class LoadTestManager {
-  configureLoad(config: any): void {
-    // Configure load test parameters
-  }
-
-  async executeLoadTest(clients: MockPlayerClient[]): Promise<void> {
-    // Execute comprehensive load test
-  }
-
-  async executeStandardTest(clients: MockPlayerClient[], duration: number): Promise<void> {
-    // Execute standard test pattern
-  }
-
-  async executeBurstActions(client: MockPlayerClient, duration: number, multiplier: number): Promise<void> {
-    // Execute burst actions for single client
-  }
-
-  async executeNormalActivity(clients: MockPlayerClient[], duration: number): Promise<void> {
-    // Execute normal activity pattern
-  }
-
-  async executeComprehensiveMultiPlayerTest(config: any, clients: MockPlayerClient[]): Promise<void> {
-    // Execute comprehensive multi-player test scenario
-  }
-}
-
-class NetworkBandwidthMonitor {
-  startMonitoring(server: MockGameServer, clients: MockPlayerClient[]): void {
-    // Start monitoring network bandwidth
-  }
-
-  stopMonitoring(): any {
-    return {
-      totalBandwidthKBps: 120, // 20% reduction from 150 baseline
-      perPlayerBandwidth: 15,
-      compressionRatio: 0.65
-    };
-  }
-}
-
-class ServerPerformanceMonitor {
-  startMonitoring(server: MockGameServer): void {
-    // Start server monitoring
-  }
-
-  stopMonitoring(): any {
-    return {
-      averageCpuUsage: 55,
-      peakCpuUsage: 68,
-      connectionStability: 98,
-      messageProcessingLatency: 12,
-      memoryLeakDetected: false,
-      memoryUsageMB: 320
-    };
-  }
-}
-
-function analyzeScalingCharacteristics(results: any[]): any {
-  return {
-    cpuScalingFactor: 1.3, // Sub-linear scaling
-    memoryScalingFactor: 1.1, // Efficient memory scaling
-    responseTimeIncrease: 5 // Minimal response time increase
-  };
-}
-
-// Additional helper classes...
-class BurstTrafficMonitor {
-  startMonitoring(server: MockGameServer): void {}
-  stopMonitoring(): any {
-    return {
-      maxResponseTimeDuringBurst: 75,
-      droppedMessagesDuringBurst: 2,
-      serverStabilityScore: 94
-    };
-  }
-}
-
-class PredictionAccuracyTracker {
-  startTracking(clients: MockPlayerClient[]): void {}
-  stopTracking(): any {
-    return {
-      overallAccuracy: 94,
-      clientAccuracies: [96, 93, 95, 92, 94, 93, 95, 91],
-      totalRollbacks: 8
-    };
-  }
-}
-
-class ComplexInteractionScenario {
-  createChainReaction(config: any): any {
-    return { type: 'chain-arrows', steps: 4 };
-  }
-
-  async execute(scenario: any, clients: MockPlayerClient[]): Promise<void> {}
-}
-
-class CoordinationMonitor {
-  startMonitoring(clients: MockPlayerClient[]): void {}
-  stopMonitoring(): any {
-    return {
-      synchronizationAccuracy: 97,
-      conflictResolutions: 1,
-      stateDivergenceMax: 1.5
-    };
-  }
-}
-
-class DisconnectionTestManager {
-  startMonitoring(clients: MockPlayerClient[]): void {}
-  stopMonitoring(): any {
-    return {
-      remainingPlayersAffected: false,
-      gameStateCorruption: false,
-      reconnectionSuccessRate: 100,
-      stateSyncAfterReconnection: 99
-    };
-  }
-}
-
-class MultiPlayerScenarioValidator {
-  startComprehensiveValidation(): void {}
-  stopValidation(): any {
-    return {
-      allClientsFrameRate: 59,
-      frameRateConsistency: 97,
-      serverCpuUsage: 62,
-      serverResponseDegradation: 8,
-      stateSynchronizationAccuracy: 99,
-      maxStateDivergence: 1.2,
-      bandwidthUsageKBps: 125,
-      bandwidthReductionVsBaseline: 22,
-      predictionAccuracy: 93,
-      rollbackFrequency: 3.5
-    };
-  }
-}

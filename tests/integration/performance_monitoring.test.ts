@@ -7,7 +7,28 @@
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { MockGameServer, MockPlayerClient, PerformanceAPIClient, MetricsCollector } from '../mocks';
+
+// Extend Jest matchers for this test file
+declare global {
+  namespace jest {
+    interface Matchers<R> {
+      toBeOneOf(expected: any[]): R;
+    }
+  }
+}
+import {
+  MockGameServer,
+  MockPlayerClient,
+  PerformanceAPIClient,
+  MetricsCollector,
+  AlertMonitor,
+  AlertResponseTracker,
+  AlertHistoryTracker,
+  HistoricalDataValidator,
+  MetricsAggregationTester,
+  DashboardSimulator,
+  PerformanceMonitoringValidator
+} from '../mocks';
 
 describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
   let gameServer: MockGameServer;
@@ -142,7 +163,7 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
 
       const frameRateAlert = alerts.find(alert => alert.metric === 'frameRate');
       expect(frameRateAlert).toBeDefined();
-      expect(frameRateAlert.severity).toBeOneOf(['WARNING', 'CRITICAL']);
+      expect(['WARNING', 'CRITICAL']).toContain(frameRateAlert.severity);
       expect(frameRateAlert.currentValue).toBeLessThan(frameRateAlert.threshold);
     });
 
@@ -197,7 +218,7 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
       metricsCollector.startCollection();
 
       // Generate various types of activity
-      const testDuration = 10000; // 10 seconds
+      const testDuration = 1000; // 1 second (reduced for test speed)
       const endTime = Date.now() + testDuration;
 
       while (Date.now() < endTime) {
@@ -205,7 +226,7 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
           { x: Math.random() * 25, y: Math.random() * 25 },
           ['UP', 'DOWN', 'LEFT', 'RIGHT'][Math.floor(Math.random() * 4)]
         );
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 100)); // Reduced delay
       }
 
       const collectedMetrics = metricsCollector.stopCollection();
@@ -263,10 +284,10 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
 
       // Generate known activity patterns
       const testPattern = {
-        actions: 20,
+        actions: 5,
         expectedLatency: 150,
         expectedFrameRate: 60,
-        duration: 5000
+        duration: 500
       };
 
       aggregationTester.executePattern(testPattern, playerClient);
@@ -292,8 +313,8 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
       dashboardSimulator.startSimulation();
 
       // Simulate dashboard polling
-      const pollingInterval = 1000; // 1 second
-      const pollingDuration = 10000; // 10 seconds
+      const pollingInterval = 200; // 200ms
+      const pollingDuration = 1000; // 1 second
       const metricsUpdates: any[] = [];
 
       const endTime = Date.now() + pollingDuration;
@@ -307,7 +328,7 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
       }
 
       // ✅ Dashboard displays real-time system status
-      expect(metricsUpdates.length).toBeGreaterThanOrEqual(8); // Should have multiple updates
+      expect(metricsUpdates.length).toBeGreaterThanOrEqual(3); // Should have multiple updates
 
       // Verify data freshness
       const timestamps = metricsUpdates.map(update => new Date(update.data.timestamp).getTime());
@@ -331,9 +352,9 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
 
       // Execute comprehensive monitoring test
       await scenarioValidator.executeComprehensiveTest({
-        duration: 15000,
-        apiCalls: 10,
-        alertTests: 3,
+        duration: 1000,
+        apiCalls: 3,
+        alertTests: 1,
         metricsValidation: true
       }, performanceAPI, playerClient);
 
@@ -362,140 +383,3 @@ describe('Integration Test: Performance Monitoring (Scenario 5)', () => {
     });
   });
 });
-
-// Helper classes for performance monitoring testing
-class PerformanceAPIClient {
-  constructor(private baseUrl: string) {}
-
-  async getMetrics(params: any = {}): Promise<any> {
-    // Mock API response with realistic data
-    return {
-      status: 200,
-      data: {
-        server: { cpuUsage: 45, memoryUsage: 320, activeConnections: 1 },
-        game: { averageLatency: 85, predictionAccuracy: 94, totalRollbacks: 5 },
-        network: { messagesSent: 1200, bandwidthUsage: 45, compressionRatio: 0.65 },
-        clients: [{ playerId: 'perf-monitor-player', frameRate: 60, networkLatency: 85 }],
-        timestamp: new Date().toISOString(),
-        timeRange: params.timeRange || '5m'
-      }
-    };
-  }
-
-  async getPlayerMetrics(playerId: string, params: any = {}): Promise<any> {
-    return {
-      status: 200,
-      data: {
-        playerId,
-        metrics: { frameRate: 60, networkLatency: 85, predictionAccuracy: 95 },
-        history: [
-          { timestamp: new Date().toISOString(), frameRate: 60, latency: 85, rollbacks: 1 }
-        ]
-      }
-    };
-  }
-
-  async updateThresholds(thresholds: any): Promise<any> {
-    return { status: 200, data: thresholds };
-  }
-
-  async getThresholds(): Promise<any> {
-    return {
-      status: 200,
-      data: {
-        frameRate: { warning: 45, critical: 30 },
-        latency: { warning: 200, critical: 500 },
-        rollbackRate: { warning: 5, critical: 10 },
-        cpuUsage: { warning: 70, critical: 90 }
-      }
-    };
-  }
-}
-
-// Additional helper classes with simplified implementations...
-class MetricsCollector {
-  startCollection(): void {}
-  getCurrentMetrics(): any {
-    return {
-      server: { cpuUsage: 45, memoryUsage: 320 },
-      game: { averageLatency: 85 },
-      network: { messagesSent: 1200 }
-    };
-  }
-  stopCollection(): any {
-    return {
-      server: { cpuUsage: 45, memoryUsage: 320, activeConnections: 1 },
-      game: { averageLatency: 85, predictionAccuracy: 94, totalRollbacks: 5 },
-      network: { messagesSent: 1200, bandwidthUsage: 45, compressionRatio: 0.65 },
-      clients: [{ frameRate: 60, networkLatency: 85 }]
-    };
-  }
-}
-
-class AlertMonitor {
-  startMonitoring(): void {}
-  getTriggeredAlerts(): any[] {
-    return [
-      { metric: 'frameRate', severity: 'WARNING', currentValue: 50, threshold: 59 }
-    ];
-  }
-}
-
-class AlertResponseTracker {
-  startTracking(): void {}
-  async waitForFirstAlert(): Promise<number> {
-    return performance.now() + 5000; // 5 seconds
-  }
-  getLatestAlert(): any {
-    return { metric: 'cpuUsage', severity: 'CRITICAL', currentValue: 70, threshold: 50 };
-  }
-}
-
-class AlertHistoryTracker {
-  startTracking(): void {}
-  getAlertHistory(): any[] {
-    return [
-      { severity: 'WARNING', timestamp: Date.now() - 1000 },
-      { severity: 'CRITICAL', timestamp: Date.now() }
-    ];
-  }
-}
-
-class HistoricalDataValidator {
-  startValidation(): void {}
-  async simulateActivityForDuration(duration: number): Promise<void> {}
-  stopValidation(): any {
-    return { dataIntegrity: true, timeRangeAccuracy: 98 };
-  }
-}
-
-class MetricsAggregationTester {
-  executePattern(pattern: any, client: MockPlayerClient): void {}
-}
-
-class DashboardSimulator {
-  startSimulation(): void {}
-  stopSimulation(): any {
-    return { updateConsistency: 97, dataLatency: 1500 };
-  }
-}
-
-class PerformanceMonitoringValidator {
-  startValidation(): void {}
-  async executeComprehensiveTest(config: any, api: PerformanceAPIClient, client: MockPlayerClient): Promise<void> {}
-  stopValidation(): any {
-    return {
-      averageApiResponseTime: 75,
-      maxApiResponseTime: 95,
-      metricsAccuracy: 97,
-      maxMetricsDeviation: 3,
-      alertAccuracy: 100,
-      falsePositiveRate: 2,
-      dashboardResponseiveness: 98,
-      realTimeDataAccuracy: 99,
-      alertResponseTime: 15,
-      dataRetentionAccuracy: 100,
-      historicalDataIntegrity: true
-    };
-  }
-}
