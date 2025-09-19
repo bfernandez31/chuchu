@@ -49,11 +49,23 @@ export class HybridCoordinator {
       return;
     }
 
+    // Check if game is available
+    if (!this.queue.currentGame) {
+      console.error('❌ Cannot enable hybrid system: Game not initialized');
+      return;
+    }
+
     // Update CONFIG to use new tick rates
     this.updateServerConfig();
 
     // Start authoritative server
-    this.authoritativeServer.start();
+    try {
+      this.authoritativeServer.start();
+    } catch (error) {
+      console.error('❌ Failed to start authoritative server:', error);
+      this.restoreLegacyConfig();
+      return;
+    }
 
     this.isEnabled = true;
 
@@ -198,6 +210,16 @@ export class HybridCoordinator {
     }
 
     console.log('🔧 Hybrid system config updated:', newConfig);
+  }
+
+  /**
+   * Called by the existing game loop to integrate hybrid functionality
+   */
+  onGameTick(): void {
+    if (this.isEnabled) {
+      // Let the authoritative server process this tick
+      (this.authoritativeServer as any).onGameTick?.();
+    }
   }
 
   /**

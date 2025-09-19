@@ -17,7 +17,7 @@ export interface AuthoritativeServerConfig {
 }
 
 export class AuthoritativeGameServer {
-  private game: Game;
+  private game: Game | null = null;
   private queue: Queue;
   private config: AuthoritativeServerConfig;
   private lastTickTime: number = 0;
@@ -27,7 +27,7 @@ export class AuthoritativeGameServer {
 
   constructor(queue: Queue, config: Partial<AuthoritativeServerConfig> = {}) {
     this.queue = queue;
-    this.game = queue.currentGame;
+    // Don't assign game immediately - it will be set when start() is called
     this.config = {
       tickRate: 20, // Reduced from 50 FPS to 20 FPS for server
       stateSnapshotInterval: 1000, // Full snapshot every 1 second
@@ -37,7 +37,7 @@ export class AuthoritativeGameServer {
   }
 
   /**
-   * Start the authoritative game server loop
+   * Start the authoritative game server (integrates with existing loop)
    */
   start(): void {
     if (this.isRunning) {
@@ -45,11 +45,18 @@ export class AuthoritativeGameServer {
       return;
     }
 
+    // Ensure game is available before starting
+    this.game = this.queue.currentGame;
+    if (!this.game) {
+      console.error('❌ Cannot start authoritative server: Game not initialized');
+      return;
+    }
+
     this.isRunning = true;
     this.lastTickTime = Date.now();
-    this.scheduleNextTick();
 
-    console.log(`🎮 Authoritative Game Server started at ${this.config.tickRate} TPS`);
+    // Don't start our own loop - integrate with existing executeGame loop
+    console.log(`🎮 Authoritative Game Server enabled (integrates with existing game loop)`);
   }
 
   /**
@@ -76,7 +83,30 @@ export class AuthoritativeGameServer {
   }
 
   /**
-   * Process a single game tick
+   * Called by existing game loop - processes authoritative state
+   */
+  onGameTick(): void {
+    if (!this.isRunning) return;
+
+    const now = Date.now();
+    const deltaTime = now - this.lastTickTime;
+    this.lastTickTime = now;
+    this.tickCount++;
+
+    // Send periodic full snapshots for reliability
+    if (now - this.lastFullSnapshot >= this.config.stateSnapshotInterval) {
+      this.sendFullSnapshot(now);
+      this.lastFullSnapshot = now;
+    }
+
+    // Log performance statistics every 10 ticks
+    if (this.tickCount % 10 === 0) {
+      this.logPerformanceStats(deltaTime);
+    }
+  }
+
+  /**
+   * Process a single game tick (legacy method for standalone mode)
    */
   private processTick(): void {
     const now = Date.now();
@@ -84,10 +114,22 @@ export class AuthoritativeGameServer {
     this.lastTickTime = now;
     this.tickCount++;
 
-    // Execute game logic (existing game.execute method)
-    this.game.execute(() => {
-      this.broadcastGameState(now);
-    });
+    // Safety check: ensure game is still available
+    if (!this.game) {
+      console.warn('⚠️ Game instance not available, stopping authoritative server');
+      this.stop();
+      return;
+    }
+
+    try {
+      // Execute game logic (existing game.execute method)
+      this.game.execute(() => {
+        this.broadcastGameState(now);
+      });
+    } catch (error) {
+      console.error('❌ Error in game execution:', error);
+      // Continue running but log the error
+    }
 
     // Send periodic full snapshots for reliability
     if (now - this.lastFullSnapshot >= this.config.stateSnapshotInterval) {
@@ -165,6 +207,9 @@ export class AuthoritativeGameServer {
    * Create authoritative game state
    */
   private createAuthoritativeState(timestamp: number): GameState {
+    if (!this.game) {
+      throw new Error('Game not available for state creation');
+    }
     const baseState = this.game.state();
 
     // Enhance state with authoritative metadata
@@ -187,6 +232,7 @@ export class AuthoritativeGameServer {
     if (!playerId || !input) return false;
 
     // Check if player exists in game
+    if (!this.game) return false;
     const player = this.game.players.find(p => p.key === playerId);
     if (!player) return false;
 
@@ -224,6 +270,17 @@ export class AuthoritativeGameServer {
     playerCount: number;
     entityCount: number;
   } {
+    if (!this.game) {
+      return {
+        tickRate: this.config.tickRate,
+        actualTPS: 0,
+        tickCount: this.tickCount,
+        uptime: 0,
+        playerCount: 0,
+        entityCount: 0
+      };
+    }
+
     const playerCount = this.game.players.filter(p => p.connected).length;
     const strategy = this.game.currentStrategy;
     const entityCount = (strategy?.mouses?.length || 0) + (strategy?.cats?.length || 0);

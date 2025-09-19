@@ -152,10 +152,9 @@ export class Queue {
     });
     this.currentGame = new Game(this);
 
-    // Enable hybrid system after initialization
-    setTimeout(() => {
-      this.hybridCoordinator.enable();
-    }, 1000);
+    // Initialize hybrid system but don't enable it automatically
+    // It will be enabled when players actually join and game starts
+    console.log('🔧 Hybrid Predictive Rendering System initialized (disabled by default)');
   }
 
   processMsg(payload: DataMsg, ws?: WebSocket) {
@@ -241,12 +240,23 @@ export class Queue {
 
   executeGame() {
     this.currentGame!.started = this.currentGame.players.length >= CONFIG.MIN_PLAYERS;
+
+    // Enable hybrid system when game actually starts with players
+    if (this.currentGame!.started && !this.hybridCoordinator.getStatus().enabled) {
+      console.log('🚀 Game started with players - enabling hybrid system');
+      this.hybridCoordinator.enable();
+    }
+
     this.currentGame!.execute(() => {
       this.sendHighScoreToServer();
       this.sendGameToServer();
       this.sendQueueUpdate();
       this.asyncSave();
     });
+
+    // Let hybrid system process this tick if enabled
+    this.hybridCoordinator.onGameTick();
+
     this.sendGameToServer();
     if (this.currentGame!.started) {
       // Calcul de la fréquence adaptative
