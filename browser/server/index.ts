@@ -2,6 +2,8 @@ import QueueDisplay from './queue.display';
 import {ScoreDisplay} from "./score.display";
 import {GameDisplay} from "./game.display";
 import {QrCodeDisplay} from "./qrcode.display";
+import {PredictiveRenderer} from "./predictive-renderer";
+import {HybridDebugDisplay} from "./hybrid-debug.display";
 import {createWs} from '../common/ws';
 import {CONFIG} from "../common/config";
 import {decodeServerMessage, ServerMessage} from '../../src/messages_pb';
@@ -79,6 +81,11 @@ const game = new GameDisplay();
 const qrcode = new QrCodeDisplay();
 const optimizedRenderer = new OptimizedRenderer(game);
 
+// Initialize Predictive Renderer (Phase 1)
+let predictiveRenderer: PredictiveRenderer | null = null;
+let hybridModeEnabled = false;
+const hybridDebug = new HybridDebugDisplay();
+
 let ws: WebSocket;
 let lastGameState: any = null;
 
@@ -93,6 +100,66 @@ fetch('/config.json').then(config => {
       ws.addEventListener('open', () => {
         ws.send(JSON.stringify({type: 'server'}));
         qrcode.init();
+
+        // Initialize Predictive Renderer when connection opens
+        if (!predictiveRenderer) {
+          predictiveRenderer = new PredictiveRenderer(game, {
+            debugMode: CONFIG.DEBUG_MODE || false,
+            performanceMonitoring: true
+          });
+          predictiveRenderer.start();
+          hybridModeEnabled = true;
+          console.log('🚀 Hybrid Predictive Rendering enabled');
+
+          // Show status message
+          hybridDebug.showStatus('Hybrid Predictive Rendering enabled', 'success');
+
+          // Start debug monitoring
+          setInterval(() => {
+            if (predictiveRenderer && hybridModeEnabled) {
+              const rendererStats = predictiveRenderer.getStats();
+              hybridDebug.update({
+                renderer: rendererStats,
+                network: {
+                  reduction: '60%', // Calculated: 50 FPS -> 20 TPS
+                  serverTPS: 20,
+                  clientFPS: rendererStats.fps
+                },
+                system: {
+                  enabled: true,
+                  mode: 'HYBRID',
+                  uptime: Date.now() - performance.now()
+                }
+              });
+            }
+          }, 1000);
+
+          // Add keyboard shortcuts for debugging
+          document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.shiftKey) {
+              switch (e.key.toLowerCase()) {
+                case 'h': // Ctrl+Shift+H: Toggle hybrid debug
+                  e.preventDefault();
+                  hybridDebug.toggle();
+                  break;
+                case 'p': // Ctrl+Shift+P: Force prediction test
+                  e.preventDefault();
+                  if (predictiveRenderer && lastGameState) {
+                    predictiveRenderer.addPrediction(lastGameState);
+                    hybridDebug.showStatus('Manual prediction added', 'info');
+                  }
+                  break;
+                case 'r': // Ctrl+Shift+R: Force render
+                  e.preventDefault();
+                  if (predictiveRenderer) {
+                    predictiveRenderer.forceRender();
+                    hybridDebug.showStatus('Manual render triggered', 'info');
+                  }
+                  break;
+              }
+            }
+          });
+        }
       })
 
       ws.addEventListener("message", function (event) {
@@ -102,11 +169,23 @@ fetch('/config.json').then(config => {
               lastGameState = { ...lastGameState, ...payload.game};
               const gameState = {state: lastGameState};
 
-              // Adaptation automatique du FPS selon la charge
-              optimizedRenderer.adaptFPSBasedOnGameState(gameState);
+              // Check if this is a server authoritative state with metadata
+              const isAuthoritativeState = (payload as any)._meta?.authoritative;
+              const timestamp = (payload as any)._meta?.timestamp || Date.now();
 
-              // Demander un redraw avec le nouveau système optimisé
-              optimizedRenderer.markForRedraw(gameState);
+              if (hybridModeEnabled && predictiveRenderer) {
+                // Route to Predictive Renderer (Phase 1)
+                if (isAuthoritativeState) {
+                  predictiveRenderer.onServerState(lastGameState, timestamp);
+                } else {
+                  // Handle as prediction or interpolated state
+                  predictiveRenderer.addPrediction(lastGameState, timestamp);
+                }
+              } else {
+                // Fallback to legacy renderer
+                optimizedRenderer.adaptFPSBasedOnGameState(gameState);
+                optimizedRenderer.markForRedraw(gameState);
+              }
               break;
             case 'QU_':
               queue.update(payload.queue);

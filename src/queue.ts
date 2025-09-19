@@ -6,6 +6,7 @@ import * as fs from "fs";
 import {CONFIG} from "../browser/common/config";
 import {Bot} from "./bot";
 import { encodeServerMessage, ServerMessage } from './messages_pb';
+import {HybridCoordinator} from "./prediction/hybrid-coordinator";
 
 /**
  * Optimiseur de batching WebSocket pour éviter les envois redondants
@@ -132,11 +133,16 @@ export class Queue {
   savePlanned = false;
   private adaptiveLoop: AdaptiveGameLoop;
   private batcher: WebSocketBatcher;
+  private hybridCoordinator: HybridCoordinator;
 
   constructor(path: string) {
     this.path = path;
     this.adaptiveLoop = new AdaptiveGameLoop();
     this.batcher = new WebSocketBatcher(this);
+    this.hybridCoordinator = new HybridCoordinator(this, {
+      debugMode: process.env.NODE_ENV === 'development'
+    });
+
     fs.readFile(this.path, 'utf8', (err, data) => {
       if (err) {
         console.error('Cannont initialize', err);
@@ -145,6 +151,11 @@ export class Queue {
       }
     });
     this.currentGame = new Game(this);
+
+    // Enable hybrid system after initialization
+    setTimeout(() => {
+      this.hybridCoordinator.enable();
+    }, 1000);
   }
 
   processMsg(payload: DataMsg, ws?: WebSocket) {
@@ -362,5 +373,37 @@ export class Queue {
 
   doneWaiting() {
     this.players.forEach(pl => pl.stopWait());
+  }
+
+  /**
+   * Get hybrid system status and statistics
+   */
+  getHybridStatus() {
+    return this.hybridCoordinator.getStatus();
+  }
+
+  /**
+   * Get hybrid performance metrics
+   */
+  getHybridMetrics() {
+    return this.hybridCoordinator.getPerformanceMetrics();
+  }
+
+  /**
+   * Enable/disable hybrid predictive rendering
+   */
+  setHybridEnabled(enabled: boolean) {
+    if (enabled) {
+      this.hybridCoordinator.enable();
+    } else {
+      this.hybridCoordinator.disable();
+    }
+  }
+
+  /**
+   * Update hybrid system configuration
+   */
+  updateHybridConfig(config: any) {
+    this.hybridCoordinator.updateConfig(config);
   }
 }
