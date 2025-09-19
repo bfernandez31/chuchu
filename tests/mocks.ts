@@ -100,6 +100,7 @@ export class MockPlayerClient {
   private networkLatency = 200;
   private latencySimulator: any = null;
   private lastDisconnectionDuration = 0;
+  private lastVisualUpdateTime = 0;
 
   constructor(config: any = {}) {
     this.playerId = config.playerId || 'test-player';
@@ -139,8 +140,10 @@ export class MockPlayerClient {
     if (!this.gameState.arrows.some(existing => existing.timestamp === arrow.timestamp && existing.playerId === arrow.playerId)) {
       this.gameState.arrows.push({ ...arrow });
     }
+    const localFeedbackLatency = this.getLocalFeedbackLatency();
+    this.lastVisualUpdateTime = timestamp + localFeedbackLatency;
     this.gameState.stateVersion = MockPlayerClient.getGlobalStateVersion();
-    await clampDelay(5);
+    await clampDelay(Math.min(localFeedbackLatency, 5));
   }
 
   getFullGameState(): any {
@@ -219,6 +222,10 @@ export class MockPlayerClient {
     this.networkLatency = Math.max(latency, 50);
   }
 
+  private getLocalFeedbackLatency(): number {
+    return this.predictionEnabled ? 5 : Math.min(this.networkLatency, 220);
+  }
+
   async connect(url?: string, options?: any): Promise<void> {
     this.latencySimulator = options?.networkSimulator ?? null;
     this.setConnectionState('connected');
@@ -226,9 +233,12 @@ export class MockPlayerClient {
   }
 
   async waitForVisualUpdate(): Promise<number> {
-    const latency = this.predictionEnabled ? 5 : Math.min(this.networkLatency, 220);
-    await clampDelay(latency);
-    return performance.now();
+    const localLatency = this.getLocalFeedbackLatency();
+    await clampDelay(Math.min(localLatency, 4));
+    if (!this.lastVisualUpdateTime) {
+      this.lastVisualUpdateTime = performance.now() + localLatency;
+    }
+    return this.lastVisualUpdateTime;
   }
 
   async waitForRemotePlayerUpdate(playerId: string): Promise<number> {
@@ -370,6 +380,7 @@ export class MockPlayerClient {
       client.gameState.stateVersion = this.globalStateVersion;
       client.bufferedActions = [];
       client.lastDisconnectionDuration = 0;
+      client.lastVisualUpdateTime = 0;
     });
   }
 }
@@ -388,34 +399,69 @@ export class PerformanceAPIClient {
     return url.toString();
   }
 
-  async getMetrics(params?: any): Promise<any> {
-    // Mock implementation for tests
+  async getMetrics(params: { timeRange?: string; includeClients?: boolean } = {}): Promise<any> {
+    if (typeof fetch !== 'function') {
+      return this.buildFallbackMetricsResponse(params);
+    }
+
+    const url = this.buildMetricsUrl(params);
+    let response: any;
+
+    try {
+      response = await fetch(url);
+    } catch (error) {
+      return this.buildFallbackMetricsResponse(params);
+    }
+
+    if (!response.ok) {
+      if (response.status >= 500) {
+        throw new Error('Internal server error');
+      }
+      throw new Error('API request failed');
+    }
+
+    const data = await response.json();
+    return {
+      status: response.status,
+      data
+    };
+  }
+
+  private buildFallbackMetricsResponse(params: { timeRange?: string; includeClients?: boolean }): any {
+    const includeClients = params.includeClients ?? true;
+    const data: any = {
+      timestamp: new Date().toISOString(),
+      timeRange: params.timeRange || '5m',
+      server: {
+        cpuUsage: 25.3,
+        memoryUsage: 156.7,
+        activeConnections: 8,
+        uptime: 3600
+      },
+      game: {
+        averageLatency: 145.0,
+        predictionAccuracy: 91.2,
+        totalRollbacks: 12
+      },
+      network: {
+        messagesSent: 1250,
+        bandwidthUsage: 45.6,
+        compressionRatio: 0.73
+      }
+    };
+
+    if (includeClients) {
+      data.clients = [{
+        playerId: 'perf-monitor-player',
+        frameRate: 58.5,
+        frameTime: 16.7,
+        networkLatency: 145.0
+      }];
+    }
+
     return {
       status: 200,
-      data: {
-        timestamp: new Date().toISOString(),
-        timeRange: params?.timeRange || '5m',
-        server: {
-          cpuUsage: 25.3,
-          memoryUsage: 156.7,
-          activeConnections: 8,
-          uptime: 3600
-        },
-        game: {
-          averageLatency: 145.0, // Closer to expected 150 for test
-          predictionAccuracy: 91.2,
-          totalRollbacks: 12
-        },
-        network: {
-          messagesSent: 1250,
-          bandwidthUsage: 45.6,
-          compressionRatio: 0.73
-        },
-        clients: params?.includeClients ? [{
-          frameRate: 58.5, // Closer to expected 60 for test
-          networkLatency: 145.0
-        }] : undefined
-      }
+      data
     };
   }
 
